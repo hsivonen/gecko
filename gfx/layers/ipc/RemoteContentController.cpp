@@ -298,6 +298,21 @@ void RemoteContentController::NotifyAsyncAutoscrollRejected(
   }
 }
 
+void RemoteContentController::NotifyFocusLayersIdChanged(
+    const LayersId& aLayersId) {
+  if (MessageLoop::current() != mCompositorThread) {
+    // We have to send messages from the compositor thread
+    mCompositorThread->PostTask(NewRunnableMethod<LayersId>(
+        "layers::RemoteContentController::NotifyFocusLayersIdChanged", this,
+        &RemoteContentController::NotifyFocusLayersIdChanged, aLayersId));
+    return;
+  }
+
+  if (mCanSend) {
+    Unused << SendNotifyFocusLayersIdChanged(aLayersId);
+  }
+}
+
 void RemoteContentController::CancelAutoscroll(
     const ScrollableLayerGuid& aGuid) {
   if (XRE_GetProcessType() == GeckoProcessType_GPU) {

@@ -187,6 +187,7 @@ class APZCCallbackHelper {
       const ScrollableLayerGuid::ViewID& aScrollId);
   static void NotifyAsyncAutoscrollRejected(
       const ScrollableLayerGuid::ViewID& aScrollId);
+  static void NotifyFocusLayersIdChanged(const LayersId& aLayersId);
 
   static void CancelAutoscroll(const ScrollableLayerGuid::ViewID& aScrollId);
 

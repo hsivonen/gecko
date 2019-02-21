@@ -87,6 +87,12 @@ mozilla::ipc::IPCResult APZChild::RecvNotifyAsyncAutoscrollRejected(
   return IPC_OK();
 }
 
+mozilla::ipc::IPCResult APZChild::RecvNotifyFocusLayersIdChanged(
+    const LayersId& aLayersId) {
+  mController->NotifyFocusLayersIdChanged(aLayersId);
+  return IPC_OK();
+}
+
 mozilla::ipc::IPCResult APZChild::RecvDestroy() {
   // mController->Destroy will be called in the destructor
   PAPZChild::Send__delete__(this);

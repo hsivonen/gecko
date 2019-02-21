@@ -176,6 +176,8 @@ class GeckoContentController {
   virtual void NotifyAsyncAutoscrollRejected(
       const ScrollableLayerGuid::ViewID& aScrollId) = 0;
 
+  virtual void NotifyFocusLayersIdChanged(const LayersId& aLayersId) = 0;
+
   virtual void CancelAutoscroll(const ScrollableLayerGuid& aGuid) = 0;
 
   virtual void UpdateOverscrollVelocity(float aX, float aY,

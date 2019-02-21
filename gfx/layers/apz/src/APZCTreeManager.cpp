@@ -564,6 +564,9 @@ void APZCTreeManager::UpdateFocusState(LayersId aRootLayerTreeId,
   }
 
   mFocusState.Update(aRootLayerTreeId, aOriginatingLayersId, aFocusTarget);
+  RefPtr<GeckoContentController> controller =
+      GetContentController(aRootLayerTreeId);
+  controller->NotifyFocusLayersIdChanged(mFocusState.GetFocusLayersId());
 }
 
 void APZCTreeManager::UpdateHitTestingTree(LayersId aRootLayerTreeId,

@@ -86,6 +86,12 @@ void ContentProcessController::NotifyAsyncAutoscrollRejected(
   APZCCallbackHelper::NotifyAsyncAutoscrollRejected(aScrollId);
 }
 
+void ContentProcessController::NotifyFocusLayersIdChanged(
+    const LayersId& aLayersId) {
+  // This should never get called
+  MOZ_ASSERT(false);
+}
+
 void ContentProcessController::CancelAutoscroll(
     const ScrollableLayerGuid& aGuid) {
   // This should never get called

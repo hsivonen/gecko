@@ -294,6 +294,18 @@ void ChromeProcessController::NotifyAsyncAutoscrollRejected(
   APZCCallbackHelper::NotifyAsyncAutoscrollRejected(aScrollId);
 }
 
+void ChromeProcessController::NotifyFocusLayersIdChanged(
+    const LayersId& aLayersId) {
+  if (MessageLoop::current() != mUILoop) {
+    mUILoop->PostTask(NewRunnableMethod<LayersId>(
+        "layers::ChromeProcessController::NotifyFocusLayersIdChanged", this,
+        &ChromeProcessController::NotifyFocusLayersIdChanged, aLayersId));
+    return;
+  }
+
+  APZCCallbackHelper::NotifyFocusLayersIdChanged(aLayersId);
+}
+
 void ChromeProcessController::CancelAutoscroll(
     const ScrollableLayerGuid& aGuid) {
   if (MessageLoop::current() != mUILoop) {

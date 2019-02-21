@@ -10,6 +10,7 @@
 #include "gfxPlatform.h"  // For gfxPlatform::UseTiling
 #include "gfxPrefs.h"
 #include "LayersLogging.h"  // For Stringify
+#include "mozilla/GlobalFocusState.h"
 #include "mozilla/dom/Element.h"
 #include "mozilla/dom/MouseEventBinding.h"
 #include "mozilla/dom/TabParent.h"
@@ -939,6 +940,12 @@ void APZCCallbackHelper::NotifyFlushComplete(nsIPresShell* aShell) {
   data.AppendInt(aScrollId);
   observerService->NotifyObservers(nullptr, "autoscroll-rejected-by-apz",
                                    data.get());
+}
+
+/* static */ void APZCCallbackHelper::NotifyFocusLayersIdChanged(
+    const LayersId& aLayersId) {
+  MOZ_ASSERT(NS_IsMainThread());
+  GlobalFocusState::SetFocusedLayersId(aLayersId);
 }
 
 /* static */ void APZCCallbackHelper::CancelAutoscroll(

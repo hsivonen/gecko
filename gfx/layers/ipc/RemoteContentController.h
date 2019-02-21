@@ -81,6 +81,8 @@ class RemoteContentController : public GeckoContentController,
   virtual void NotifyAsyncAutoscrollRejected(
       const ScrollableLayerGuid::ViewID& aScrollId) override;
 
+  virtual void NotifyFocusLayersIdChanged(const LayersId& aLayersId) override;
+
   virtual void CancelAutoscroll(const ScrollableLayerGuid& aScrollId) override;
 
   virtual void ActorDestroy(ActorDestroyReason aWhy) override;

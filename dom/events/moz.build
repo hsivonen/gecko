@@ -33,6 +33,7 @@ EXPORTS.mozilla += [
     'EventNameList.h',
     'EventStateManager.h',
     'EventStates.h',
+    'GlobalFocusState.h',
     'IMEContentObserver.h',
     'IMEStateManager.h',
     'InputTypeList.h',
@@ -143,6 +144,7 @@ UNIFIED_SOURCES += [
 # nsEventStateManager.cpp should be built separately because of Mac OS X headers.
 SOURCES += [
     'EventStateManager.cpp',
+    'GlobalFocusState.cpp',
 ]
 
 if CONFIG['MOZ_WEBSPEECH']:

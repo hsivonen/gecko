@@ -51,6 +51,9 @@ class APZChild final : public PAPZChild {
   mozilla::ipc::IPCResult RecvNotifyAsyncAutoscrollRejected(
       const ViewID& aScrollId);
 
+  mozilla::ipc::IPCResult RecvNotifyFocusLayersIdChanged(
+      const LayersId& aLayersId);
+
   mozilla::ipc::IPCResult RecvDestroy();
 
  private:

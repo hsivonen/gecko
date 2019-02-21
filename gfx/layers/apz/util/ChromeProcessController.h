@@ -77,6 +77,7 @@ class ChromeProcessController : public mozilla::layers::GeckoContentController {
       const ScrollableLayerGuid::ViewID& aScrollId) override;
   virtual void NotifyAsyncAutoscrollRejected(
       const ScrollableLayerGuid::ViewID& aScrollId) override;
+  virtual void NotifyFocusLayersIdChanged(const LayersId& aLayersId) override;
   virtual void CancelAutoscroll(const ScrollableLayerGuid& aGuid) override;
 
  private:

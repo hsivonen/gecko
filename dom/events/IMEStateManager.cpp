@@ -12,6 +12,7 @@
 #include "mozilla/EditorBase.h"
 #include "mozilla/EventListenerManager.h"
 #include "mozilla/EventStates.h"
+#include "mozilla/GlobalFocusState.h"
 #include "mozilla/MouseEvents.h"
 #include "mozilla/Preferences.h"
 #include "mozilla/TextComposition.h"
@@ -1378,6 +1379,16 @@ void IMEStateManager::DispatchCompositionEvent(
       aEventTargetNode->IsContent()
           ? TabParent::GetFrom(aEventTargetNode->AsContent())
           : nullptr;
+
+  if (tabParent) {
+    TabParent* preciseTabParent = GlobalFocusState::FocusedTabParent();
+    if (preciseTabParent) {
+      tabParent = preciseTabParent;
+    }
+    // else there's a race between APZ async updates to GlobalFocusState
+    // and the LayersId to TabParent mapping. Fall back to using the
+    // top-level child process.
+  }
 
   MOZ_LOG(
       sISMLog, LogLevel::Info,

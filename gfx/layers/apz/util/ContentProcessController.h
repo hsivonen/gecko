@@ -67,6 +67,8 @@ class ContentProcessController final : public GeckoContentController {
   void NotifyAsyncAutoscrollRejected(
       const ScrollableLayerGuid::ViewID& aScrollId) override;
 
+  void NotifyFocusLayersIdChanged(const LayersId& aLayersId) override;
+
   void CancelAutoscroll(const ScrollableLayerGuid& aGuid) override;
 
   void PostDelayedTask(already_AddRefed<Runnable> aRunnable,

@@ -16,6 +16,7 @@ using struct mozilla::layers::ScrollableLayerGuid from "mozilla/layers/Scrollabl
 using mozilla::layers::ScrollableLayerGuid::ViewID from "mozilla/layers/ScrollableLayerGuid.h";
 using mozilla::layers::MaybeZoomConstraints from "mozilla/layers/ZoomConstraints.h";
 using mozilla::layers::GeckoContentController::APZStateChange from "mozilla/layers/GeckoContentController.h";
+using mozilla::layers::LayersId from "mozilla/layers/LayersTypes.h";
 using mozilla::layers::ScrollDirection from "mozilla/layers/LayersTypes.h";
 using mozilla::dom::TabId from "mozilla/dom/ipc/IdType.h";
 using mozilla::dom::ContentParentId from "mozilla/dom/ipc/IdType.h";
@@ -68,6 +69,8 @@ child:
   async NotifyAsyncScrollbarDragRejected(ViewID aScrollId);
 
   async NotifyAsyncAutoscrollRejected(ViewID aScrollId);
+
+  async NotifyFocusLayersIdChanged(LayersId aLayersId);
 
   async Destroy();
 };
