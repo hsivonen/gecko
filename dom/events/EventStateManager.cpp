@@ -2867,6 +2867,18 @@ void EventStateManager::PostHandleKeyboardEvent(
       RefPtr<TabParent> remote =
           aTargetFrame ? TabParent::GetFrom(aTargetFrame->GetContent())
                        : nullptr;
+      if (remote && aKeyboardEvent->mLayersId.IsValid()) {
+        TabParent* preciseRemote =
+            TabParent::GetTabParentFromLayersId(aKeyboardEvent->mLayersId);
+        if (preciseRemote) {
+          remote = preciseRemote;
+        }
+        // else there is a race between APZ and the LayersId to TabParent
+        // mapping, so fall back to delivering the event to the topmost child
+        // process to fall back to the same path as when JS changes focus when
+        // there are keyboard events in flight. See
+        // https://bugzilla.mozilla.org/show_bug.cgi?id=1524986
+      }
       if (remote && !remote->IsReadyToHandleInputEvents()) {
         // We need to dispatch the event to the browser element again if we were
         // waiting for the key reply but the event wasn't sent to the content
