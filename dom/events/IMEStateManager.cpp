@@ -429,6 +429,13 @@ nsresult IMEStateManager::OnChangeFocusInternal(nsPresContext* aPresContext,
                                                 nsIContent* aContent,
                                                 InputContextAction aAction) {
   RefPtr<TabParent> newTabParent = TabParent::GetFrom(aContent);
+  if (newTabParent) {
+    newTabParent = GlobalFocusState::FocusedTabParent();
+    MOZ_ASSERT(newTabParent, "LayersId doesn't map to a TabParent.");
+    if (!newTabParent) {
+      return NS_ERROR_FAILURE;
+    }
+  }
 
   MOZ_LOG(sISMLog, LogLevel::Info,
           ("OnChangeFocusInternal(aPresContext=0x%p (available: %s), "
