@@ -8,6 +8,7 @@
 #include "mozilla/EventDispatcher.h"
 #include "mozilla/EventStateManager.h"
 #include "mozilla/EventStates.h"
+#include "mozilla/GlobalFocusState.h"
 #include "mozilla/HTMLEditor.h"
 #include "mozilla/IMEStateManager.h"
 #include "mozilla/MiscEvents.h"
@@ -5533,6 +5534,13 @@ nsresult EventStateManager::DoContentCommandEvent(
           nsIContent* focusedContent = fm ? fm->GetFocusedElement() : nullptr;
           RefPtr<TabParent> remote = TabParent::GetFrom(focusedContent);
           if (remote) {
+            TabParent* preciseRemote = GlobalFocusState::FocusedTabParent();
+            if (preciseRemote) {
+              remote = preciseRemote;
+            }
+            // else there's a race between GlobalFocusState getting updated
+            // and the LayersId to TabParent mapping getting updated. Fall
+            // back to the top-level child.
             nsCOMPtr<nsITransferable> transferable = aEvent->mTransferable;
             IPCDataTransfer ipcDataTransfer;
             nsContentUtils::TransferableToIPCTransferable(
