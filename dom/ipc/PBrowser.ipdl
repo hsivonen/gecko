@@ -187,11 +187,11 @@ parent:
     async SetNativeChildOfShareableWindow(uintptr_t childWindow);
 
     /**
-     * When content moves focus from a native plugin window that's a child
-     * of the native browser window we need to move native focus to the
-     * browser. Otherwise the plugin window will never relinquish focus.
+     * Move focus up one level in the Web browsing context hierarchy (with
+     * browser UI at the top level) when there's a process boundary between
+     * the current focus holder and the next focus holder.
      */
-    sync DispatchFocusToTopLevelWindow();
+    sync MoveFocusUpOneLevel();
 
 parent:
     /**

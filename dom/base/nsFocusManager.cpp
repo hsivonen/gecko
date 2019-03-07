@@ -1612,8 +1612,7 @@ bool nsFocusManager::Blur(nsPIDOMWindowOuter* aWindowToClear,
           // set focus to the top level window via the chrome process.
           nsCOMPtr<nsITabChild> tabChild = docShell->GetTabChild();
           if (tabChild) {
-            static_cast<TabChild*>(tabChild.get())
-                ->SendDispatchFocusToTopLevelWindow();
+            static_cast<TabChild*>(tabChild.get())->SendMoveFocusUpOneLevel();
           }
         } else {
           // note that the presshell's widget is being retrieved here, not the

@@ -8,6 +8,7 @@
 #include "nsFrameLoader.h"
 #include "nsFrameLoaderOwner.h"
 #include "nsQueryObject.h"
+#include "nsFocusManager.h"
 
 using namespace mozilla::ipc;
 
@@ -106,6 +107,18 @@ IPCResult BrowserBridgeChild::RecvSetLayersId(
     const mozilla::layers::LayersId& aLayersId) {
   MOZ_ASSERT(!mLayersId.IsValid() && aLayersId.IsValid());
   mLayersId = aLayersId;
+  return IPC_OK();
+}
+
+mozilla::ipc::IPCResult BrowserBridgeChild::RecvMoveFocusUpOneLevel() {
+  RefPtr<Element> owner = mFrameLoader->GetOwnerContent();
+  nsFocusManager* fm = nsFocusManager::GetFocusManager();
+  if (owner && fm) {
+    RefPtr<Element> result;
+    // TODO: transfer flags cross-process
+    fm->MoveFocus(nullptr, owner, nsIFocusManager::MOVEFOCUS_FORWARD,
+                  nsIFocusManager::FLAG_BYKEY, getter_AddRefs(result));
+  }
   return IPC_OK();
 }
 

@@ -144,7 +144,8 @@ NS_IMPL_ISUPPORTS(TabParent, nsITabParent, nsIAuthPromptProvider,
                   nsISupportsWeakReference)
 
 TabParent::TabParent(ContentParent* aManager, const TabId& aTabId,
-                     const TabContext& aContext, uint32_t aChromeFlags)
+                     const TabContext& aContext, uint32_t aChromeFlags,
+                     BrowserBridgeParent* aBrowserBridgeParent)
     : TabContext(aContext),
       mFrameElement(nullptr),
       mContentCache(*this),
@@ -162,6 +163,7 @@ TabParent::TabParent(ContentParent* aManager, const TabId& aTabId,
       mIsDestroyed(false),
       mChromeFlags(aChromeFlags),
       mDragValid(false),
+      mBrowserBridgeParent(aBrowserBridgeParent),
       mTabId(aTabId),
       mCreatingWindow(false),
       mCursor(eCursorInvalid),
@@ -2320,6 +2322,10 @@ RenderFrame* TabParent::GetRenderFrame() {
   return &mRenderFrame;
 }
 
+BrowserBridgeParent* TabParent::GetBrowserBridgeParent() const {
+  return mBrowserBridgeParent;
+}
+
 mozilla::ipc::IPCResult TabParent::RecvRequestIMEToCommitComposition(
     const bool& aCancel, bool* aIsCommitted, nsString* aCommittedString) {
   nsCOMPtr<nsIWidget> widget = GetWidget();
@@ -2435,10 +2441,15 @@ mozilla::ipc::IPCResult TabParent::RecvSetNativeChildOfShareableWindow(
 #endif
 }
 
-mozilla::ipc::IPCResult TabParent::RecvDispatchFocusToTopLevelWindow() {
-  nsCOMPtr<nsIWidget> widget = GetTopLevelWidget();
-  if (widget) {
-    widget->SetFocus(false);
+mozilla::ipc::IPCResult TabParent::RecvMoveFocusUpOneLevel() {
+  BrowserBridgeParent* bridgeParent = GetBrowserBridgeParent();
+  if (bridgeParent) {
+    mozilla::Unused << bridgeParent->SendMoveFocusUpOneLevel();
+  } else {
+    nsCOMPtr<nsIWidget> widget = GetTopLevelWidget();
+    if (widget) {
+      widget->SetFocus(false);
+    }
   }
   return IPC_OK();
 }
