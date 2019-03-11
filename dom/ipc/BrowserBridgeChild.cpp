@@ -124,6 +124,26 @@ mozilla::ipc::IPCResult BrowserBridgeChild::RecvMoveFocusUpOneLevel() {
   return IPC_OK();
 }
 
+mozilla::ipc::IPCResult BrowserBridgeChild::RecvRequestFocus(
+    const bool& aCanRaise) {
+  nsCOMPtr<nsIFocusManager> fm = nsFocusManager::GetFocusManager();
+  if (!fm) {
+    return IPC_OK();
+  }
+
+  RefPtr<Element> owner = mFrameLoader->GetOwnerContent();
+
+  if (!owner || !owner->OwnerDoc()) {
+    return IPC_OK();
+  }
+
+  uint32_t flags = nsIFocusManager::FLAG_NOSCROLL;
+  if (aCanRaise) flags |= nsIFocusManager::FLAG_RAISE;
+
+  fm->SetFocus(owner, flags);
+  return IPC_OK();
+}
+
 void BrowserBridgeChild::ActorDestroy(ActorDestroyReason aWhy) {
   mIPCOpen = false;
 }

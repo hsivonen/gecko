@@ -52,6 +52,8 @@ class BrowserBridgeChild : public PBrowserBridgeChild {
 
   mozilla::ipc::IPCResult RecvMoveFocusUpOneLevel();
 
+  mozilla::ipc::IPCResult RecvRequestFocus(const bool& aCanRaise);
+
   void ActorDestroy(ActorDestroyReason aWhy) override;
 
  private:
