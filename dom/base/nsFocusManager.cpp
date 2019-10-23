@@ -1152,6 +1152,7 @@ void nsFocusManager::SetFocusInner(Element* aNewContent, int32_t aFlags,
   nsCOMPtr<nsPIDOMWindowOuter> newWindow;
   nsCOMPtr<nsPIDOMWindowOuter> subWindow = GetContentWindow(elementToFocus);
   if (subWindow) {
+    // XXX What if this is an out-of-process iframe?
     elementToFocus = GetFocusedDescendant(subWindow, eIncludeAllDescendants,
                                           getter_AddRefs(newWindow));
     // since a window is being refocused, clear aFocusChanged so that the
@@ -1285,8 +1286,11 @@ void nsFocusManager::SetFocusInner(Element* aNewContent, int32_t aFlags,
   // if the FLAG_NOSWITCHFRAME flag is used, only allow the focus to be
   // shifted away from the current element if the new shell to focus is
   // the same or an ancestor shell of the currently focused shell.
-  bool allowFrameSwitch = !(aFlags & FLAG_NOSWITCHFRAME) ||
-                          IsSameOrAncestor(newWindow, mFocusedWindow);
+  bool allowFrameSwitch =
+      !(aFlags & FLAG_NOSWITCHFRAME) ||
+      IsSameOrAncestor(newWindow, mFocusedWindow
+                                      ? mFocusedWindow->GetBrowsingContext()
+                                      : nullptr);
 
   // if the element is in the active window, frame switching is allowed and
   // the content is in a visible window, fire blur and focus events.
@@ -1406,6 +1410,37 @@ bool nsFocusManager::IsSameOrAncestor(nsPIDOMWindowOuter* aPossibleAncestor,
     dsti.swap(parentDsti);
   }
 
+  return false;
+}
+
+bool nsFocusManager::IsSameOrAncestor(nsPIDOMWindowOuter* aPossibleAncestor,
+                                      BrowsingContext* aContext) {
+  if (!aContext || !aPossibleAncestor) {
+    return false;
+  }
+
+  if (XRE_IsParentProcess()) {
+    return IsSameOrAncestor(aPossibleAncestor, aContext->GetDOMWindow());
+  }
+
+  return IsSameOrAncestor(aPossibleAncestor->GetBrowsingContext(), aContext);
+}
+
+bool nsFocusManager::IsSameOrAncestor(BrowsingContext* aPossibleAncestor,
+                                      BrowsingContext* aContext) {
+  if (!aContext || !aPossibleAncestor) {
+    return false;
+  }
+
+  MOZ_DIAGNOSTIC_ASSERT(!XRE_IsParentProcess());
+
+  while (aContext) {
+    if (aPossibleAncestor == aContext) {
+      return true;
+    }
+    // XXX this is wrong for `mozbrowser` and XUL `browser remote=true`.
+    aContext = aContext->GetParent();
+  }
   return false;
 }
 

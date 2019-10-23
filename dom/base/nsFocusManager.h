@@ -241,6 +241,11 @@ class nsFocusManager final : public nsIFocusManager,
    */
   bool IsSameOrAncestor(nsPIDOMWindowOuter* aPossibleAncestor,
                         nsPIDOMWindowOuter* aWindow);
+  bool IsSameOrAncestor(nsPIDOMWindowOuter* aPossibleAncestor,
+                        mozilla::dom::BrowsingContext* aContext);
+
+  bool IsSameOrAncestor(mozilla::dom::BrowsingContext* aPossibleAncestor,
+                        mozilla::dom::BrowsingContext* aContext);
 
   /**
    * Returns the window that is the lowest common ancestor of both aWindow1
