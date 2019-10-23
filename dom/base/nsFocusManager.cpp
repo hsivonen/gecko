@@ -1180,15 +1180,37 @@ void nsFocusManager::SetFocusInner(Element* aNewContent, int32_t aFlags,
   while (docShell) {
     bool inUnload;
     docShell->GetIsInUnload(&inUnload);
-    if (inUnload) return;
+    if (inUnload) {
+      return;
+    }
 
     bool beingDestroyed;
     docShell->IsBeingDestroyed(&beingDestroyed);
-    if (beingDestroyed) return;
+    if (beingDestroyed) {
+      return;
+    }
+
+    BrowsingContext* bc = docShell->GetBrowsingContext();
 
     nsCOMPtr<nsIDocShellTreeItem> parentDsti;
     docShell->GetInProcessParent(getter_AddRefs(parentDsti));
     docShell = do_QueryInterface(parentDsti);
+    if (!docShell && !XRE_IsParentProcess()) {
+      // We don't have an in-process parent, but let's see if we have
+      // an in-process ascestor or if an out-of-process ancestor
+      // is discarded.
+      do {
+        bc = bc->GetParent();
+        if (bc && bc->IsDiscarded()) {
+          return;
+        }
+      } while (bc && !bc->IsInProcess());
+      if (bc) {
+        docShell = bc->GetDocShell();
+      } else {
+        docShell = nullptr;
+      }
+    }
   }
 
   // if the new element is in the same window as the currently focused element
