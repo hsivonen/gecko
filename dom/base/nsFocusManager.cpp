@@ -1214,16 +1214,32 @@ void nsFocusManager::SetFocusInner(Element* aNewContent, int32_t aFlags,
 
   // to check if the new element is in the active window, compare the
   // new root docshell for the new element with the active window's docshell.
+  RefPtr<BrowsingContext> newRootBrowsingContext = nullptr;
   bool isElementInActiveWindow = false;
+  if (XRE_IsParentProcess()) {
+    nsCOMPtr<nsPIDOMWindowOuter> newRootWindow = nullptr;
+    nsCOMPtr<nsIDocShellTreeItem> dsti = newWindow->GetDocShell();
+    if (dsti) {
+      nsCOMPtr<nsIDocShellTreeItem> root;
+      dsti->GetInProcessRootTreeItem(getter_AddRefs(root));
+      newRootWindow = root ? root->GetWindow() : nullptr;
 
-  nsCOMPtr<nsIDocShellTreeItem> dsti = newWindow->GetDocShell();
-  nsCOMPtr<nsPIDOMWindowOuter> newRootWindow;
-  if (dsti) {
-    nsCOMPtr<nsIDocShellTreeItem> root;
-    dsti->GetInProcessRootTreeItem(getter_AddRefs(root));
-    newRootWindow = root ? root->GetWindow() : nullptr;
-
-    isElementInActiveWindow = (mActiveWindow && newRootWindow == mActiveWindow);
+      isElementInActiveWindow =
+          (mActiveWindow && newRootWindow == mActiveWindow);
+    }
+    if (newRootWindow) {
+      newRootBrowsingContext = newRootWindow->GetBrowsingContext();
+    }
+  } else {
+    // XXX This is wrong for `<iframe mozbrowser>` and for XUL
+    // `<browser remote="true">`. See:
+    // https://searchfox.org/mozilla-central/rev/8a63fc190b39ed6951abb4aef4a56487a43962bc/dom/base/nsFrameLoader.cpp#229-232
+    newRootBrowsingContext = newWindow->GetBrowsingContext()->Top();
+    // to check if the new element is in the active window, compare the
+    // new root docshell for the new element with the active window's docshell.
+    isElementInActiveWindow =
+        (mActiveWindow && (mActiveWindow->GetBrowsingContext()->Top() ==
+                           newRootBrowsingContext));
   }
 
   // Exit fullscreen if we're focusing a windowed plugin on a non-MacOSX
@@ -1342,7 +1358,14 @@ void nsFocusManager::SetFocusInner(Element* aNewContent, int32_t aFlags,
     if (allowFrameSwitch)
       newWindow->UpdateCommands(NS_LITERAL_STRING("focus"), nullptr, 0);
 
-    if (aFlags & FLAG_RAISE) RaiseWindow(newRootWindow);
+    if (aFlags & FLAG_RAISE) {
+      nsCOMPtr<nsPIDOMWindowOuter> newRootWindow;
+      if (newRootBrowsingContext) {
+        // XXX Handle out-of-process case using IPC
+        newRootWindow = newRootBrowsingContext->GetDOMWindow();
+      }
+      RaiseWindow(newRootWindow);
+    }
   }
 }
 
