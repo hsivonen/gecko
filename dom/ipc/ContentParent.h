@@ -659,6 +659,23 @@ class ContentParent final
   mozilla::ipc::IPCResult RecvWindowFocus(BrowsingContext* aContext,
                                           CallerType aCallerType);
   mozilla::ipc::IPCResult RecvWindowBlur(BrowsingContext* aContext);
+  mozilla::ipc::IPCResult RecvRaiseWindow(BrowsingContext* aContext,
+                                          CallerType aCallerType);
+  mozilla::ipc::IPCResult RecvWindowLowered(BrowsingContext* aContext);
+  mozilla::ipc::IPCResult RecvClearFocus(BrowsingContext* aContext);
+  mozilla::ipc::IPCResult RecvSetFocusedBrowsingContext(
+      BrowsingContext* aContext);
+  mozilla::ipc::IPCResult RecvSetActiveBrowsingContext(
+      BrowsingContext* aContext);
+  mozilla::ipc::IPCResult RecvUnsetActiveBrowsingContext(
+      BrowsingContext* aContext);
+  mozilla::ipc::IPCResult RecvSetFocusedElement(BrowsingContext* aSetToFalse,
+                                                BrowsingContext* aSetToTrue);
+  mozilla::ipc::IPCResult RecvBlurToParent(
+      BrowsingContext* aFocusedBrowsingContext, BrowsingContext* aWindowToClear,
+      BrowsingContext* aAncestorWindowToFocus, bool aIsLeavingDocument,
+      bool aAdjustWidget, bool aWindowToClearHandled,
+      bool aAncestorWindowToFocusHandled);
   mozilla::ipc::IPCResult RecvWindowPostMessage(
       BrowsingContext* aContext, const ClonedMessageData& aMessage,
       const PostMessageData& aData);
