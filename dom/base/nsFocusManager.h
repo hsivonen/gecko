@@ -243,7 +243,8 @@ class nsFocusManager final : public nsIFocusManager,
                         nsPIDOMWindowOuter* aWindow);
   bool IsSameOrAncestor(nsPIDOMWindowOuter* aPossibleAncestor,
                         mozilla::dom::BrowsingContext* aContext);
-
+  bool IsSameOrAncestor(mozilla::dom::BrowsingContext* aPossibleAncestor,
+                        nsPIDOMWindowOuter* aWindow);
   bool IsSameOrAncestor(mozilla::dom::BrowsingContext* aPossibleAncestor,
                         mozilla::dom::BrowsingContext* aContext);
 

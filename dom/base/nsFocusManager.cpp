@@ -1333,8 +1333,9 @@ void nsFocusManager::SetFocusInner(Element* aNewContent, int32_t aFlags,
       // current node in the existing window is cleared. If moving to a
       // window elsewhere, we want to maintain the current node in the
       // window but still blur it.
-      bool currentIsSameOrAncestor =
-          IsSameOrAncestor(mFocusedWindow, newWindow);
+      bool currentIsSameOrAncestor = IsSameOrAncestor(
+          mFocusedWindow ? mFocusedWindow->GetBrowsingContext() : nullptr,
+          newWindow);
       // find the common ancestor of the currently focused window and the new
       // window. The ancestor will need to have its currently focused node
       // cleared once the document has been blurred. Otherwise, we'll be in a
@@ -1424,6 +1425,19 @@ bool nsFocusManager::IsSameOrAncestor(nsPIDOMWindowOuter* aPossibleAncestor,
   }
 
   return IsSameOrAncestor(aPossibleAncestor->GetBrowsingContext(), aContext);
+}
+
+bool nsFocusManager::IsSameOrAncestor(BrowsingContext* aPossibleAncestor,
+                                      nsPIDOMWindowOuter* aWindow) {
+  if (!aWindow || !aPossibleAncestor) {
+    return false;
+  }
+
+  if (XRE_IsParentProcess()) {
+    return IsSameOrAncestor(aPossibleAncestor->GetDOMWindow(), aWindow);
+  }
+
+  return IsSameOrAncestor(aPossibleAncestor, aWindow->GetBrowsingContext());
 }
 
 bool nsFocusManager::IsSameOrAncestor(BrowsingContext* aPossibleAncestor,
