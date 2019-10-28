@@ -1288,9 +1288,7 @@ void nsFocusManager::SetFocusInner(Element* aNewContent, int32_t aFlags,
   // the same or an ancestor shell of the currently focused shell.
   bool allowFrameSwitch =
       !(aFlags & FLAG_NOSWITCHFRAME) ||
-      IsSameOrAncestor(newWindow, mFocusedWindow
-                                      ? mFocusedWindow->GetBrowsingContext()
-                                      : nullptr);
+      IsSameOrAncestor(newWindow, GetFocusedBrowsingContext());
 
   // if the element is in the active window, frame switching is allowed and
   // the content is in a visible window, fire blur and focus events.
@@ -1333,9 +1331,8 @@ void nsFocusManager::SetFocusInner(Element* aNewContent, int32_t aFlags,
       // current node in the existing window is cleared. If moving to a
       // window elsewhere, we want to maintain the current node in the
       // window but still blur it.
-      bool currentIsSameOrAncestor = IsSameOrAncestor(
-          mFocusedWindow ? mFocusedWindow->GetBrowsingContext() : nullptr,
-          newWindow);
+      bool currentIsSameOrAncestor =
+          IsSameOrAncestor(GetFocusedBrowsingContext(), newWindow);
       // find the common ancestor of the currently focused window and the new
       // window. The ancestor will need to have its currently focused node
       // cleared once the document has been blurred. Otherwise, we'll be in a
@@ -1348,13 +1345,15 @@ void nsFocusManager::SetFocusInner(Element* aNewContent, int32_t aFlags,
       // D is focused and we want to focus C. Once D has been blurred, we need
       // to clear out the focus in A, otherwise A would still maintain that B
       // was focused, and B that D was focused.
-      nsCOMPtr<nsPIDOMWindowOuter> commonAncestor;
-      if (!isElementInFocusedWindow)
-        commonAncestor = GetCommonAncestor(newWindow, mFocusedWindow);
+      RefPtr<BrowsingContext> commonAncestor;
+      if (!isElementInFocusedWindow) {
+        commonAncestor =
+            GetCommonAncestor(newWindow, GetFocusedBrowsingContext());
+      }
 
       if (!Blur(currentIsSameOrAncestor ? mFocusedWindow.get() : nullptr,
-                commonAncestor, !isElementInFocusedWindow, aAdjustWidget,
-                elementToFocus)) {
+                commonAncestor ? commonAncestor->GetDOMWindow() : nullptr,
+                !isElementInFocusedWindow, aAdjustWidget, elementToFocus)) {
         return;
       }
     }
@@ -1458,45 +1457,76 @@ bool nsFocusManager::IsSameOrAncestor(BrowsingContext* aPossibleAncestor,
   return false;
 }
 
-already_AddRefed<nsPIDOMWindowOuter> nsFocusManager::GetCommonAncestor(
-    nsPIDOMWindowOuter* aWindow1, nsPIDOMWindowOuter* aWindow2) {
-  NS_ENSURE_TRUE(aWindow1 && aWindow2, nullptr);
+mozilla::dom::BrowsingContext* nsFocusManager::GetCommonAncestor(
+    nsPIDOMWindowOuter* aWindow, mozilla::dom::BrowsingContext* aContext) {
+  NS_ENSURE_TRUE(aWindow && aContext, nullptr);
 
-  nsCOMPtr<nsIDocShellTreeItem> dsti1 = aWindow1->GetDocShell();
-  NS_ENSURE_TRUE(dsti1, nullptr);
+  if (XRE_IsParentProcess()) {
+    nsCOMPtr<nsIDocShellTreeItem> dsti1 = aWindow->GetDocShell();
+    NS_ENSURE_TRUE(dsti1, nullptr);
 
-  nsCOMPtr<nsIDocShellTreeItem> dsti2 = aWindow2->GetDocShell();
-  NS_ENSURE_TRUE(dsti2, nullptr);
+    nsCOMPtr<nsIDocShellTreeItem> dsti2 = aContext->GetDocShell();
+    NS_ENSURE_TRUE(dsti2, nullptr);
 
-  AutoTArray<nsIDocShellTreeItem*, 30> parents1, parents2;
+    AutoTArray<nsIDocShellTreeItem*, 30> parents1, parents2;
+    do {
+      parents1.AppendElement(dsti1);
+      nsCOMPtr<nsIDocShellTreeItem> parentDsti1;
+      dsti1->GetInProcessParent(getter_AddRefs(parentDsti1));
+      dsti1.swap(parentDsti1);
+    } while (dsti1);
+    do {
+      parents2.AppendElement(dsti2);
+      nsCOMPtr<nsIDocShellTreeItem> parentDsti2;
+      dsti2->GetInProcessParent(getter_AddRefs(parentDsti2));
+      dsti2.swap(parentDsti2);
+    } while (dsti2);
+
+    uint32_t pos1 = parents1.Length();
+    uint32_t pos2 = parents2.Length();
+    nsIDocShellTreeItem* parent = nullptr;
+    uint32_t len;
+    for (len = std::min(pos1, pos2); len > 0; --len) {
+      nsIDocShellTreeItem* child1 = parents1.ElementAt(--pos1);
+      nsIDocShellTreeItem* child2 = parents2.ElementAt(--pos2);
+      if (child1 != child2) {
+        break;
+      }
+      parent = child1;
+    }
+
+    return parent ? parent->GetBrowsingContext() : nullptr;
+  }
+
+  BrowsingContext* bc1 = aWindow->GetBrowsingContext();
+  NS_ENSURE_TRUE(bc1, nullptr);
+
+  BrowsingContext* bc2 = aContext;
+
+  AutoTArray<BrowsingContext*, 30> parents1, parents2;
   do {
-    parents1.AppendElement(dsti1);
-    nsCOMPtr<nsIDocShellTreeItem> parentDsti1;
-    dsti1->GetInProcessParent(getter_AddRefs(parentDsti1));
-    dsti1.swap(parentDsti1);
-  } while (dsti1);
+    parents1.AppendElement(bc1);
+    bc1 = bc1->GetParent();
+  } while (bc1);
   do {
-    parents2.AppendElement(dsti2);
-    nsCOMPtr<nsIDocShellTreeItem> parentDsti2;
-    dsti2->GetInProcessParent(getter_AddRefs(parentDsti2));
-    dsti2.swap(parentDsti2);
-  } while (dsti2);
+    parents2.AppendElement(bc2);
+    bc2 = bc2->GetParent();
+  } while (bc2);
 
   uint32_t pos1 = parents1.Length();
   uint32_t pos2 = parents2.Length();
-  nsIDocShellTreeItem* parent = nullptr;
+  BrowsingContext* parent = nullptr;
   uint32_t len;
   for (len = std::min(pos1, pos2); len > 0; --len) {
-    nsIDocShellTreeItem* child1 = parents1.ElementAt(--pos1);
-    nsIDocShellTreeItem* child2 = parents2.ElementAt(--pos2);
+    BrowsingContext* child1 = parents1.ElementAt(--pos1);
+    BrowsingContext* child2 = parents2.ElementAt(--pos2);
     if (child1 != child2) {
       break;
     }
     parent = child1;
   }
 
-  nsCOMPtr<nsPIDOMWindowOuter> window = parent ? parent->GetWindow() : nullptr;
-  return window.forget();
+  return parent;
 }
 
 void nsFocusManager::AdjustWindowFocus(nsPIDOMWindowOuter* aWindow,

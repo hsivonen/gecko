@@ -93,6 +93,13 @@ class nsFocusManager final : public nsIFocusManager,
    */
   nsPIDOMWindowOuter* GetFocusedWindow() const { return mFocusedWindow; }
 
+  mozilla::dom::BrowsingContext* GetFocusedBrowsingContext() const {
+    if (mFocusedWindow) {
+      return mFocusedWindow->GetBrowsingContext();
+    }
+    return nullptr;
+  }
+
   /**
    * Return an active window. Version of nsIFocusManager::GetActiveWindow.
    */
@@ -249,11 +256,11 @@ class nsFocusManager final : public nsIFocusManager,
                         mozilla::dom::BrowsingContext* aContext);
 
   /**
-   * Returns the window that is the lowest common ancestor of both aWindow1
-   * and aWindow2, or null if they share no common ancestor.
+   * Returns the window that is the lowest common ancestor of both aWindow
+   * and aContext, or null if they share no common ancestor.
    */
-  already_AddRefed<nsPIDOMWindowOuter> GetCommonAncestor(
-      nsPIDOMWindowOuter* aWindow1, nsPIDOMWindowOuter* aWindow2);
+  mozilla::dom::BrowsingContext* GetCommonAncestor(
+      nsPIDOMWindowOuter* aWindow, mozilla::dom::BrowsingContext* aContext);
 
   /**
    * When aNewWindow is focused, adjust the ancestors of aNewWindow so that they
