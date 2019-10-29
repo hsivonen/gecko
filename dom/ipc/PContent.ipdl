@@ -1545,6 +1545,7 @@ both:
     async WindowFocus(BrowsingContext aContext);
     async WindowBlur(BrowsingContext aContext);
     async RaiseWindow(BrowsingContext aContext);
+    async WindowLowered(BrowsingContext aContext);
     async WindowPostMessage(BrowsingContext aContext, ClonedMessageData aMessage,
                             PostMessageData aData);
 };

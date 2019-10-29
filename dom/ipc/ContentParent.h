@@ -645,6 +645,7 @@ class ContentParent final : public PContentParent,
   mozilla::ipc::IPCResult RecvWindowFocus(BrowsingContext* aContext);
   mozilla::ipc::IPCResult RecvWindowBlur(BrowsingContext* aContext);
   mozilla::ipc::IPCResult RecvRaiseWindow(BrowsingContext* aContext);
+  mozilla::ipc::IPCResult RecvWindowLowered(BrowsingContext* aContext);
   mozilla::ipc::IPCResult RecvWindowPostMessage(
       BrowsingContext* aContext, const ClonedMessageData& aMessage,
       const PostMessageData& aData);

@@ -646,20 +646,44 @@ nsFocusManager::WindowRaised(mozIDOMWindowProxy* aWindow) {
     }
   }
 
-  if (mActiveWindow == window) {
-    // The window is already active, so there is no need to focus anything,
-    // but make sure that the right widget is focused. This is a special case
-    // for Windows because when restoring a minimized window, a second
-    // activation will occur and the top-level widget could be focused instead
-    // of the child we want. We solve this by calling SetFocus to ensure that
-    // what the focus manager thinks should be the current widget is actually
-    // focused.
-    EnsureCurrentWidgetFocused();
-    return NS_OK;
-  }
+  if (XRE_IsParentProcess()) {
+    if (mActiveWindow == window) {
+      // The window is already active, so there is no need to focus anything,
+      // but make sure that the right widget is focused. This is a special case
+      // for Windows because when restoring a minimized window, a second
+      // activation will occur and the top-level widget could be focused instead
+      // of the child we want. We solve this by calling SetFocus to ensure that
+      // what the focus manager thinks should be the current widget is actually
+      // focused.
+      EnsureCurrentWidgetFocused();
+      return NS_OK;
+    }
 
-  // lower the existing window, if any. This shouldn't happen usually.
-  if (mActiveWindow) WindowLowered(mActiveWindow);
+    // lower the existing window, if any. This shouldn't happen usually.
+    if (mActiveWindow) {
+      WindowLowered(mActiveWindow);
+    }
+  } else {
+    BrowsingContext* bc = window->GetBrowsingContext();
+    if (bc == bc->Top()) {
+      BrowsingContext* active = GetActiveBrowsingContext();
+      if (active == bc) {
+        EnsureCurrentWidgetFocused();
+        return NS_OK;
+      }
+
+      if (active) {
+        if (active->IsInProcess()) {
+          WindowLowered(active->GetDOMWindow());
+        } else {
+          // mozilla::dom::ContentChild* contentChild =
+          //     mozilla::dom::ContentChild::GetSingleton();
+          // MOZ_ASSERT(contentChild);
+          // contentChild->SendWindowLowered(active);
+        }
+      }
+    }
+  }
 
   nsCOMPtr<nsIDocShellTreeItem> docShellAsItem = window->GetDocShell();
   // If there's no docShellAsItem, this window must have been closed,
@@ -1277,7 +1301,7 @@ void nsFocusManager::SetFocusInner(Element* aNewContent, int32_t aFlags,
     // new root docshell for the new element with the active window's docshell.
     isElementInActiveWindow =
         (GetActiveBrowsingContext() == newRootBrowsingContext);
-    bool debugIsElementInActiveWindow = 
+    bool debugIsElementInActiveWindow =
         (mActiveWindow && (mActiveWindow->GetBrowsingContext()->Top() ==
                            newRootBrowsingContext));
     MOZ_ASSERT(isElementInActiveWindow == debugIsElementInActiveWindow);
