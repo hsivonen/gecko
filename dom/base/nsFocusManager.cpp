@@ -44,6 +44,7 @@
 
 #include "mozilla/AccessibleCaretEventHub.h"
 #include "mozilla/ContentEvents.h"
+#include "mozilla/dom/ContentChild.h"
 #include "mozilla/dom/Element.h"
 #include "mozilla/dom/ElementBinding.h"
 #include "mozilla/dom/HTMLImageElement.h"
@@ -1385,12 +1386,16 @@ void nsFocusManager::SetFocusInner(Element* aNewContent, int32_t aFlags,
       newWindow->UpdateCommands(NS_LITERAL_STRING("focus"), nullptr, 0);
 
     if (aFlags & FLAG_RAISE) {
-      nsCOMPtr<nsPIDOMWindowOuter> newRootWindow;
       if (newRootBrowsingContext) {
-        // XXX Handle out-of-process case using IPC
-        newRootWindow = newRootBrowsingContext->GetDOMWindow();
+        if (XRE_IsParentProcess() || newRootBrowsingContext->IsInProcess()) {
+          RaiseWindow(newRootBrowsingContext->GetDOMWindow());
+        } else {
+          mozilla::dom::ContentChild* contentChild =
+              mozilla::dom::ContentChild::GetSingleton();
+          MOZ_ASSERT(contentChild);
+          contentChild->SendRaiseWindow(newRootBrowsingContext);
+        }
       }
-      RaiseWindow(newRootWindow);
     }
   }
 }

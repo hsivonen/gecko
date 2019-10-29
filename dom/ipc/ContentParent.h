@@ -644,6 +644,7 @@ class ContentParent final : public PContentParent,
                                           bool aTrustedCaller);
   mozilla::ipc::IPCResult RecvWindowFocus(BrowsingContext* aContext);
   mozilla::ipc::IPCResult RecvWindowBlur(BrowsingContext* aContext);
+  mozilla::ipc::IPCResult RecvRaiseWindow(BrowsingContext* aContext);
   mozilla::ipc::IPCResult RecvWindowPostMessage(
       BrowsingContext* aContext, const ClonedMessageData& aMessage,
       const PostMessageData& aData);

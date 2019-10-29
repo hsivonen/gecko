@@ -32,6 +32,7 @@ namespace dom {
 class Element;
 struct FocusOptions;
 class BrowserParent;
+class ContentChild;
 }  // namespace dom
 }  // namespace mozilla
 
@@ -47,6 +48,7 @@ class nsFocusManager final : public nsIFocusManager,
                              public nsSupportsWeakReference {
   typedef mozilla::widget::InputContextAction InputContextAction;
   typedef mozilla::dom::Document Document;
+  friend class mozilla::dom::ContentChild;
 
  public:
   NS_DECL_CYCLE_COLLECTION_CLASS_AMBIGUOUS(nsFocusManager, nsIFocusManager)
