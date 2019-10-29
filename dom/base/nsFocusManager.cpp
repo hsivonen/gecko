@@ -155,9 +155,10 @@ NS_INTERFACE_MAP_END
 NS_IMPL_CYCLE_COLLECTING_ADDREF(nsFocusManager)
 NS_IMPL_CYCLE_COLLECTING_RELEASE(nsFocusManager)
 
-NS_IMPL_CYCLE_COLLECTION(nsFocusManager, mActiveWindow, mFocusedWindow,
-                         mFocusedElement, mFirstBlurEvent, mFirstFocusEvent,
-                         mWindowBeingLowered, mDelayedBlurFocusEvents,
+NS_IMPL_CYCLE_COLLECTION(nsFocusManager, mActiveWindow, mActiveBrowsingContext,
+                         mFocusedWindow, mFocusedElement, mFirstBlurEvent,
+                         mFirstFocusEvent, mWindowBeingLowered,
+                         mDelayedBlurFocusEvents,
                          mMouseButtonEventHandlingDocument)
 
 nsFocusManager* nsFocusManager::sInstance = nullptr;
@@ -236,6 +237,7 @@ nsFocusManager::Observe(nsISupports* aSubject, const char* aTopic,
                         const char16_t* aData) {
   if (!nsCRT::strcmp(aTopic, "xpcom-shutdown")) {
     mActiveWindow = nullptr;
+    mActiveBrowsingContext = nullptr;
     mFocusedWindow = nullptr;
     mFocusedElement = nullptr;
     mFirstBlurEvent = nullptr;
@@ -666,6 +668,12 @@ nsFocusManager::WindowRaised(mozIDOMWindowProxy* aWindow) {
 
   // set this as the active window
   mActiveWindow = window;
+  if (!XRE_IsParentProcess()) {
+    BrowsingContext* bc = window->GetBrowsingContext();
+    if (bc == bc->Top()) {
+      mActiveBrowsingContext = bc;
+    }
+  }
 
   // ensure that the window is enabled and visible
   nsCOMPtr<nsIDocShellTreeOwner> treeOwner;
@@ -1262,8 +1270,7 @@ void nsFocusManager::SetFocusInner(Element* aNewContent, int32_t aFlags,
     // to check if the new element is in the active window, compare the
     // new root docshell for the new element with the active window's docshell.
     isElementInActiveWindow =
-        (mActiveWindow && (mActiveWindow->GetBrowsingContext()->Top() ==
-                           newRootBrowsingContext));
+        (GetActiveBrowsingContext() == newRootBrowsingContext);
   }
 
   // Exit fullscreen if we're focusing a windowed plugin on a non-MacOSX

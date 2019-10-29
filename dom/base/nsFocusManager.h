@@ -107,6 +107,16 @@ class nsFocusManager final : public nsIFocusManager,
    */
   nsPIDOMWindowOuter* GetActiveWindow() const { return mActiveWindow; }
 
+  mozilla::dom::BrowsingContext* GetActiveBrowsingContext() const {
+    if (XRE_IsParentProcess()) {
+      if (mActiveWindow) {
+        return mActiveWindow->GetBrowsingContext();
+      }
+      return nullptr;
+    }
+    return mActiveBrowsingContext;
+  }
+
   /**
    * Called when content has been removed.
    */
@@ -658,6 +668,8 @@ class nsFocusManager final : public nsIFocusManager,
 
   // the currently active and front-most top-most window
   nsCOMPtr<nsPIDOMWindowOuter> mActiveWindow;
+
+  RefPtr<mozilla::dom::BrowsingContext> mActiveBrowsingContext;
 
   // the child or top-level window that is currently focused. This window will
   // either be the same window as mActiveWindow or a descendant of it.
