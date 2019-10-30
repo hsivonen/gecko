@@ -765,6 +765,12 @@ nsFocusManager::WindowLowered(mozIDOMWindowProxy* aWindow) {
   // an unusual state.
   mWindowBeingLowered = mActiveWindow;
   mActiveWindow = nullptr;
+  if (!XRE_IsParentProcess()) {
+    BrowsingContext* bc = window->GetBrowsingContext();
+    if (bc == bc->Top()) {
+      mActiveBrowsingContext = nullptr;
+    }
+  }
 
   if (mFocusedWindow) Blur(nullptr, nullptr, true, true);
 
@@ -1271,6 +1277,10 @@ void nsFocusManager::SetFocusInner(Element* aNewContent, int32_t aFlags,
     // new root docshell for the new element with the active window's docshell.
     isElementInActiveWindow =
         (GetActiveBrowsingContext() == newRootBrowsingContext);
+    bool debugIsElementInActiveWindow = 
+        (mActiveWindow && (mActiveWindow->GetBrowsingContext()->Top() ==
+                           newRootBrowsingContext));
+    MOZ_ASSERT(isElementInActiveWindow == debugIsElementInActiveWindow);
   }
 
   // Exit fullscreen if we're focusing a windowed plugin on a non-MacOSX
