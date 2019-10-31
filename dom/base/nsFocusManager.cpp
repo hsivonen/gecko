@@ -1208,7 +1208,8 @@ void nsFocusManager::SetFocusInner(Element* aNewContent, int32_t aFlags,
   // after the frame check above so that we compare the element that will be
   // focused rather than the frame it is in.
   if (!newWindow ||
-      (newWindow == mFocusedWindow && elementToFocus == mFocusedElement)) {
+      (newWindow->GetBrowsingContext() == GetFocusedBrowsingContext() &&
+       elementToFocus == mFocusedElement)) {
     return;
   }
 
@@ -1254,7 +1255,8 @@ void nsFocusManager::SetFocusInner(Element* aNewContent, int32_t aFlags,
   }
 
   // if the new element is in the same window as the currently focused element
-  bool isElementInFocusedWindow = (mFocusedWindow == newWindow);
+  bool isElementInFocusedWindow =
+      (GetFocusedBrowsingContext() == newWindow->GetBrowsingContext());
 
   if (!isElementInFocusedWindow && mFocusedWindow && newWindow &&
       nsContentUtils::IsHandlingKeyBoardEvent()) {
@@ -1367,7 +1369,7 @@ void nsFocusManager::SetFocusInner(Element* aNewContent, int32_t aFlags,
   if (sendFocusEvent) {
     RefPtr<Element> oldFocusedElement = mFocusedElement;
     // return if blurring fails or the focus changes during the blur
-    if (mFocusedWindow) {
+    if (GetFocusedBrowsingContext()) {
       // if the focus is being moved to another element in the same document,
       // or to a descendant, pass the existing window to Blur so that the
       // current node in the existing window is cleared. If moving to a
