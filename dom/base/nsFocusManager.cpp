@@ -1254,24 +1254,40 @@ void nsFocusManager::SetFocusInner(Element* aNewContent, int32_t aFlags,
     }
   }
 
+  // XXX see if this line can move to the top of this method.
+  RefPtr<BrowsingContext> focusedBrowsingContext = GetFocusedBrowsingContext();
   // if the new element is in the same window as the currently focused element
   bool isElementInFocusedWindow =
-      (GetFocusedBrowsingContext() == newWindow->GetBrowsingContext());
+      (focusedBrowsingContext == newWindow->GetBrowsingContext());
 
-  if (!isElementInFocusedWindow && mFocusedWindow && newWindow &&
+  if (!isElementInFocusedWindow && newWindow &&
       nsContentUtils::IsHandlingKeyBoardEvent()) {
-    nsCOMPtr<nsIScriptObjectPrincipal> focused =
-        do_QueryInterface(mFocusedWindow);
-    nsCOMPtr<nsIScriptObjectPrincipal> newFocus = do_QueryInterface(newWindow);
-    nsIPrincipal* focusedPrincipal = focused->GetPrincipal();
-    nsIPrincipal* newPrincipal = newFocus->GetPrincipal();
-    if (!focusedPrincipal || !newPrincipal) {
-      return;
-    }
-    bool subsumes = false;
-    focusedPrincipal->Subsumes(newPrincipal, &subsumes);
-    if (!subsumes && !nsContentUtils::LegacyIsCallerChromeOrNativeCode()) {
-      NS_WARNING("Not allowed to focus the new window!");
+    if (XRE_IsParentProcess() ||
+        (focusedBrowsingContext && focusedBrowsingContext->IsInProcess())) {
+      // need to null-check for the XRE_IsParentProcess case
+      if (focusedBrowsingContext) {
+        nsCOMPtr<nsPIDOMWindowOuter> focusedWindow =
+            focusedBrowsingContext->GetDOMWindow();
+        MOZ_ASSERT(focusedWindow,
+                   "BrowsingContext should always have a window here.");
+        nsCOMPtr<nsIScriptObjectPrincipal> focused =
+            do_QueryInterface(focusedWindow);
+        nsCOMPtr<nsIScriptObjectPrincipal> newFocus =
+            do_QueryInterface(newWindow);
+        nsIPrincipal* focusedPrincipal = focused->GetPrincipal();
+        nsIPrincipal* newPrincipal = newFocus->GetPrincipal();
+        if (!focusedPrincipal || !newPrincipal) {
+          return;
+        }
+        bool subsumes = false;
+        focusedPrincipal->Subsumes(newPrincipal, &subsumes);
+        if (!subsumes && !nsContentUtils::LegacyIsCallerChromeOrNativeCode()) {
+          NS_WARNING("Not allowed to focus the new window!");
+          return;
+        }
+      }
+    } else if (focusedBrowsingContext &&
+               !nsContentUtils::LegacyIsCallerChromeOrNativeCode()) {
       return;
     }
   }
