@@ -1744,45 +1744,80 @@ Element* nsFocusManager::FlushAndCheckIfFocusable(Element* aElement,
 
 bool nsFocusManager::Blur(BrowsingContext* aWindowToClear,
                           BrowsingContext* aAncestorWindowToFocus,
-                          bool aIsLeavingDocument, bool aAdjustWidgets,
+                          bool aIsLeavingDocument, bool aAdjustWidget,
                           nsIContent* aContentToFocus) {
   if (XRE_IsParentProcess()) {
     return BlurImpl(aWindowToClear, aAncestorWindowToFocus, aIsLeavingDocument,
-                    aAdjustWidgets, aContentToFocus);
+                    aAdjustWidget, aContentToFocus);
   }
+  mozilla::dom::ContentChild* contentChild =
+      mozilla::dom::ContentChild::GetSingleton();
+  MOZ_ASSERT(contentChild);
+  bool windowToClearHandled = false;
+  bool ancestorWindowToFocusHandled = false;
+
   RefPtr<BrowsingContext> focusedBrowsingContext = GetFocusedBrowsingContext();
+  if (!focusedBrowsingContext) {
+    mFocusedElement = nullptr;
+    return true;
+  }
+  // XXX should more early returns from BlurImpl be hoisted here to avoid
+  // proscessing aWindowToClear and aAncestorWindowToFocus in other processes
+  // when BlurImpl returns early in this process? Or should the IPC messages
+  // for those be sent by BlurImpl itself, in which case they could arrive
+  // late?
   if (focusedBrowsingContext->IsInProcess()) {
-    if (!aWindowToClear->IsInProcess()) {
-      // XXX IPC
+    if (aWindowToClear && !aWindowToClear->IsInProcess()) {
+      if (aAncestorWindowToFocus && !aAncestorWindowToFocus->IsInProcess()) {
+        contentChild->SendSetFocusedElement(aWindowToClear,
+                                            aAncestorWindowToFocus);
+        ancestorWindowToFocusHandled = true;
+      } else {
+        contentChild->SendSetFocusedElement(aWindowToClear, nullptr);
+      }
     }
-    if (!aAncestorWindowToFocus->IsInProcess()) {
-      // XXX IPC
+    if (!ancestorWindowToFocusHandled && aAncestorWindowToFocus &&
+        !aAncestorWindowToFocus->IsInProcess()) {
+      contentChild->SendSetFocusedElement(nullptr, aAncestorWindowToFocus);
     }
     return BlurImpl(aWindowToClear, aAncestorWindowToFocus, aIsLeavingDocument,
-                    aAdjustWidgets, aContentToFocus);
+                    aAdjustWidget, aContentToFocus);
   }
-  if (aWindowToClear->IsInProcess()) {
+  if (aWindowToClear && aWindowToClear->IsInProcess()) {
     nsPIDOMWindowOuter* windowToClear = aWindowToClear->GetDOMWindow();
     MOZ_ASSERT(windowToClear);
     windowToClear->SetFocusedElement(nullptr);
-  } else if (false) {
-    // XXX IPC
+    windowToClearHandled = true;
   }
-  if (aAncestorWindowToFocus->IsInProcess()) {
+  if (aAncestorWindowToFocus && aAncestorWindowToFocus->IsInProcess()) {
     nsPIDOMWindowOuter* ancestorWindowToFocus =
         aAncestorWindowToFocus->GetDOMWindow();
     MOZ_ASSERT(ancestorWindowToFocus);
     ancestorWindowToFocus->SetFocusedElement(nullptr, 0, true);
-  } else if (false) {
-    // XXX IPC
+    ancestorWindowToFocusHandled = true;
   }
-  // XXX IPC
+  contentChild->SendBlurToParent(focusedBrowsingContext, aWindowToClear,
+                                 aAncestorWindowToFocus, aIsLeavingDocument,
+                                 aAdjustWidget, windowToClearHandled,
+                                 ancestorWindowToFocusHandled);
   return true;
+}
+
+void nsFocusManager::BlurFromOtherProcess(
+    mozilla::dom::BrowsingContext* aFocusedBrowsingContext,
+    mozilla::dom::BrowsingContext* aWindowToClear,
+    mozilla::dom::BrowsingContext* aAncestorWindowToFocus,
+    bool aIsLeavingDocument, bool aAdjustWidget) {
+  if (aFocusedBrowsingContext != GetFocusedBrowsingContext()) {
+    return;
+  }
+  BlurImpl(aWindowToClear, aAncestorWindowToFocus, aIsLeavingDocument,
+           aAdjustWidget, nullptr);
 }
 
 bool nsFocusManager::BlurImpl(BrowsingContext* aWindowToClear,
                               BrowsingContext* aAncestorWindowToFocus,
-                              bool aIsLeavingDocument, bool aAdjustWidgets,
+                              bool aIsLeavingDocument, bool aAdjustWidget,
                               nsIContent* aContentToFocus) {
   LOGFOCUS(("<<Blur begin>>"));
 
@@ -1867,7 +1902,7 @@ bool nsFocusManager::BlurImpl(BrowsingContext* aWindowToClear,
     if (mActiveWindow) {
       nsIFrame* contentFrame = element->GetPrimaryFrame();
       nsIObjectFrame* objectFrame = do_QueryFrame(contentFrame);
-      if (aAdjustWidgets && objectFrame && !sTestMode) {
+      if (aAdjustWidget && objectFrame && !sTestMode) {
         if (XRE_IsContentProcess()) {
           // set focus to the top level window via the chrome process.
           nsCOMPtr<nsIBrowserChild> browserChild = docShell->GetBrowserChild();
@@ -1891,7 +1926,7 @@ bool nsFocusManager::BlurImpl(BrowsingContext* aWindowToClear,
     }
 
     bool windowBeingLowered = !aWindowToClear && !aAncestorWindowToFocus &&
-                              aIsLeavingDocument && aAdjustWidgets;
+                              aIsLeavingDocument && aAdjustWidget;
     // if the object being blurred is a remote browser, deactivate remote
     // content
     if (BrowserParent* remote = BrowserParent::GetFrom(element)) {
@@ -2001,7 +2036,7 @@ void nsFocusManager::ActivateRemoteFrameIfNeeded(Element& aElement) {
 void nsFocusManager::Focus(nsPIDOMWindowOuter* aWindow, Element* aElement,
                            uint32_t aFlags, bool aIsNewDocument,
                            bool aFocusChanged, bool aWindowRaised,
-                           bool aAdjustWidgets, nsIContent* aContentLostFocus) {
+                           bool aAdjustWidget, nsIContent* aContentLostFocus) {
   LOGFOCUS(("<<Focus begin>>"));
 
   if (!aWindow) return;
@@ -2069,7 +2104,7 @@ void nsFocusManager::Focus(nsPIDOMWindowOuter* aWindow, Element* aElement,
   SetFocusedWindowInternal(aWindow);
 
   // Update the system focus by focusing the root widget.  But avoid this
-  // if 1) aAdjustWidgets is false or 2) aElement is a plugin that has its
+  // if 1) aAdjustWidget is false or 2) aElement is a plugin that has its
   // own widget and is either already focused or is about to be focused.
   nsCOMPtr<nsIWidget> objectFrameWidget;
   if (aElement) {
@@ -2077,7 +2112,7 @@ void nsFocusManager::Focus(nsPIDOMWindowOuter* aWindow, Element* aElement,
     nsIObjectFrame* objectFrame = do_QueryFrame(contentFrame);
     if (objectFrame) objectFrameWidget = objectFrame->GetWidget();
   }
-  if (aAdjustWidgets && !objectFrameWidget && !sTestMode) {
+  if (aAdjustWidget && !objectFrameWidget && !sTestMode) {
     if (nsViewManager* vm = presShell->GetViewManager()) {
       nsCOMPtr<nsIWidget> widget;
       vm->GetRootWidget(getter_AddRefs(widget));
@@ -2134,7 +2169,7 @@ void nsFocusManager::Focus(nsPIDOMWindowOuter* aWindow, Element* aElement,
       // that we might no longer be in the same document, due to the events we
       // fired above when aIsNewDocument.
       if (presShell->GetDocument() == aElement->GetComposedDoc()) {
-        if (aAdjustWidgets && objectFrameWidget && !sTestMode) {
+        if (aAdjustWidget && objectFrameWidget && !sTestMode) {
           objectFrameWidget->SetFocus(nsIWidget::Raise::No);
         }
 
@@ -2166,7 +2201,7 @@ void nsFocusManager::Focus(nsPIDOMWindowOuter* aWindow, Element* aElement,
     // If the window focus event (fired above when aIsNewDocument) caused
     // the plugin not to be focusable, update the system focus by focusing
     // the root widget.
-    if (aAdjustWidgets && objectFrameWidget && mFocusedWindow == aWindow &&
+    if (aAdjustWidget && objectFrameWidget && mFocusedWindow == aWindow &&
         mFocusedElement == nullptr && !sTestMode) {
       if (nsViewManager* vm = presShell->GetViewManager()) {
         nsCOMPtr<nsIWidget> widget;

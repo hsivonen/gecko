@@ -344,6 +344,12 @@ class nsFocusManager final : public nsIFocusManager,
             bool aIsLeavingDocument, bool aAdjustWidget,
             nsIContent* aContentToFocus = nullptr);
   MOZ_CAN_RUN_SCRIPT_BOUNDARY
+  void BlurFromOtherProcess(
+      mozilla::dom::BrowsingContext* aFocusedBrowsingContext,
+      mozilla::dom::BrowsingContext* aWindowToClear,
+      mozilla::dom::BrowsingContext* aAncestorWindowToFocus,
+      bool aIsLeavingDocument, bool aAdjustWidget);
+  MOZ_CAN_RUN_SCRIPT_BOUNDARY
   bool BlurImpl(mozilla::dom::BrowsingContext* aWindowToClear,
                 mozilla::dom::BrowsingContext* aAncestorWindowToFocus,
                 bool aIsLeavingDocument, bool aAdjustWidget,

@@ -6109,6 +6109,95 @@ mozilla::ipc::IPCResult ContentParent::RecvWindowLowered(
   return IPC_OK();
 }
 
+mozilla::ipc::IPCResult ContentParent::RecvSetFocusedElement(
+    BrowsingContext* aSetToFalse, BrowsingContext* aSetToTrue) {
+  bool haveToFalse = aSetToFalse && !aSetToFalse->IsDiscarded();
+  bool haveToTrue = aSetToTrue && !aSetToTrue->IsDiscarded();
+  if (!haveToFalse && !haveToTrue) {
+    MOZ_LOG(
+        BrowsingContext::GetLog(), LogLevel::Debug,
+        ("ParentIPC: Trying to send a message to dead or detached context"));
+    return IPC_OK();
+  }
+
+  ContentProcessManager* cpm = ContentProcessManager::GetSingleton();
+
+  if (haveToFalse && haveToTrue &&
+      (aSetToFalse->Canonical()->OwnerProcessId() ==
+       aSetToTrue->Canonical()->OwnerProcessId())) {
+    ContentParent* cp = cpm->GetContentProcessById(
+        ContentParentId(aSetToFalse->Canonical()->OwnerProcessId()));
+    Unused << cp->SendSetFocusedElement(aSetToFalse, aSetToTrue);
+    return IPC_OK();
+  }
+
+  if (haveToFalse) {
+    ContentParent* cp = cpm->GetContentProcessById(
+        ContentParentId(aSetToFalse->Canonical()->OwnerProcessId()));
+    Unused << cp->SendSetFocusedElement(aSetToFalse, nullptr);
+  }
+
+  if (haveToTrue) {
+    ContentParent* cp = cpm->GetContentProcessById(
+        ContentParentId(aSetToTrue->Canonical()->OwnerProcessId()));
+    Unused << cp->SendSetFocusedElement(nullptr, aSetToTrue);
+  }
+
+  return IPC_OK();
+}
+
+mozilla::ipc::IPCResult ContentParent::RecvBlurToParent(
+    BrowsingContext* aFocusedBrowsingContext, BrowsingContext* aWindowToClear,
+    BrowsingContext* aAncestorWindowToFocus, bool aIsLeavingDocument,
+    bool aAdjustWidget, bool aWindowToClearHandled,
+    bool aAncestorWindowToFocusHandled) {
+  if (!aFocusedBrowsingContext || aFocusedBrowsingContext->IsDiscarded()) {
+    MOZ_LOG(
+        BrowsingContext::GetLog(), LogLevel::Debug,
+        ("ParentIPC: Trying to send a message to dead or detached context"));
+    return IPC_OK();
+  }
+
+  ContentProcessManager* cpm = ContentProcessManager::GetSingleton();
+
+  // If aWindowToClear and aAncestorWindowToFocusHandled didn't get handled in
+  // the process that sent this IPC message and they aren't in the same process
+  // as aFocusedBrowsingContext, we need to split the off here and use
+  // SendSetFocusedElement to send them elsewhere than the blurring itself.
+
+  bool ancestorDifferent =
+      (!aAncestorWindowToFocusHandled && aAncestorWindowToFocus &&
+       !aAncestorWindowToFocus->IsDiscarded() &&
+       (aFocusedBrowsingContext->Canonical()->OwnerProcessId() !=
+        aAncestorWindowToFocus->Canonical()->OwnerProcessId()));
+  if (!aWindowToClearHandled && aWindowToClear &&
+      !aWindowToClear->IsDiscarded() &&
+      (aFocusedBrowsingContext->Canonical()->OwnerProcessId() !=
+       aWindowToClear->Canonical()->OwnerProcessId())) {
+    if (ancestorDifferent) {
+      ContentParent* cp = cpm->GetContentProcessById(
+          ContentParentId(aWindowToClear->Canonical()->OwnerProcessId()));
+      Unused << cp->SendSetFocusedElement(aWindowToClear,
+                                          aAncestorWindowToFocus);
+    } else {
+      ContentParent* cp = cpm->GetContentProcessById(
+          ContentParentId(aWindowToClear->Canonical()->OwnerProcessId()));
+      Unused << cp->SendSetFocusedElement(aWindowToClear, nullptr);
+    }
+  } else if (ancestorDifferent) {
+    ContentParent* cp = cpm->GetContentProcessById(
+        ContentParentId(aAncestorWindowToFocus->Canonical()->OwnerProcessId()));
+    Unused << cp->SendSetFocusedElement(nullptr, aAncestorWindowToFocus);
+  }
+
+  ContentParent* cp = cpm->GetContentProcessById(
+      ContentParentId(aFocusedBrowsingContext->Canonical()->OwnerProcessId()));
+  Unused << cp->SendBlurToChild(aFocusedBrowsingContext, aWindowToClear,
+                                aAncestorWindowToFocus, aIsLeavingDocument,
+                                aAdjustWidget);
+  return IPC_OK();
+}
+
 mozilla::ipc::IPCResult ContentParent::RecvWindowPostMessage(
     BrowsingContext* aContext, const ClonedMessageData& aMessage,
     const PostMessageData& aData) {

@@ -4075,6 +4075,51 @@ mozilla::ipc::IPCResult ContentChild::RecvWindowLowered(
   return IPC_OK();
 }
 
+mozilla::ipc::IPCResult ContentChild::RecvSetFocusedElement(
+    BrowsingContext* aSetToFalse, BrowsingContext* aSetToTrue) {
+  if (!aSetToFalse && !aSetToTrue) {
+    MOZ_LOG(BrowsingContext::GetLog(), LogLevel::Debug,
+            ("ChildIPC: Trying to send a message to dead or detached context"));
+    return IPC_OK();
+  }
+
+  nsCOMPtr<nsPIDOMWindowOuter> windowToFalse = aSetToFalse->GetDOMWindow();
+  nsCOMPtr<nsPIDOMWindowOuter> windowToTrue = aSetToTrue->GetDOMWindow();
+  if (!windowToFalse && windowToTrue) {
+    MOZ_LOG(
+        BrowsingContext::GetLog(), LogLevel::Debug,
+        ("ChildIPC: Trying to send a message to a context without a window"));
+    return IPC_OK();
+  }
+
+  if (windowToFalse) {
+    windowToFalse->SetFocusedElement(nullptr, 0, false);
+  }
+  if (windowToTrue) {
+    windowToTrue->SetFocusedElement(nullptr, 0, true);
+  }
+  return IPC_OK();
+}
+
+mozilla::ipc::IPCResult ContentChild::RecvBlurToChild(
+    BrowsingContext* aFocusedBrowsingContext, BrowsingContext* aWindowToClear,
+    BrowsingContext* aAncestorWindowToFocus, bool aIsLeavingDocument,
+    bool aAdjustWidget) {
+  if (!aFocusedBrowsingContext) {
+    MOZ_LOG(BrowsingContext::GetLog(), LogLevel::Debug,
+            ("ChildIPC: Trying to send a message to dead or detached context"));
+    return IPC_OK();
+  }
+
+  nsFocusManager* fm = nsFocusManager::GetFocusManager();
+  if (fm) {
+    fm->BlurFromOtherProcess(aFocusedBrowsingContext, aWindowToClear,
+                             aAncestorWindowToFocus, aIsLeavingDocument,
+                             aAdjustWidget);
+  }
+  return IPC_OK();
+}
+
 mozilla::ipc::IPCResult ContentChild::RecvWindowPostMessage(
     BrowsingContext* aContext, const ClonedMessageData& aMessage,
     const PostMessageData& aData) {
