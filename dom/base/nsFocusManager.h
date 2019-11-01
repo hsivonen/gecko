@@ -339,9 +339,15 @@ class nsFocusManager final : public nsIFocusManager,
    */
   // MOZ_CAN_RUN_SCRIPT_BOUNDARY for now, until we annotate callers.
   MOZ_CAN_RUN_SCRIPT_BOUNDARY
-  bool Blur(nsPIDOMWindowOuter* aWindowToClear,
-            nsPIDOMWindowOuter* aAncestorWindowToFocus, bool aIsLeavingDocument,
-            bool aAdjustWidget, nsIContent* aContentToFocus = nullptr);
+  bool Blur(mozilla::dom::BrowsingContext* aWindowToClear,
+            mozilla::dom::BrowsingContext* aAncestorWindowToFocus,
+            bool aIsLeavingDocument, bool aAdjustWidget,
+            nsIContent* aContentToFocus = nullptr);
+  MOZ_CAN_RUN_SCRIPT_BOUNDARY
+  bool BlurImpl(mozilla::dom::BrowsingContext* aWindowToClear,
+                mozilla::dom::BrowsingContext* aAncestorWindowToFocus,
+                bool aIsLeavingDocument, bool aAdjustWidget,
+                nsIContent* aContentToFocus);
 
   /**
    * Focus an element in the active window and child frame.

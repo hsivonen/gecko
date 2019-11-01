@@ -558,7 +558,7 @@ nsFocusManager::ClearFocus(mozIDOMWindowProxy* aWindow) {
 
   if (IsSameOrAncestor(window, mFocusedWindow)) {
     bool isAncestor = (window != mFocusedWindow);
-    if (Blur(window, nullptr, isAncestor, true)) {
+    if (Blur(window->GetBrowsingContext(), nullptr, isAncestor, true)) {
       // if we are clearing the focus on an ancestor of the focused window,
       // the ancestor will become the new focused window, so focus it
       if (isAncestor) Focus(window, nullptr, 0, true, false, false, true);
@@ -1412,16 +1412,8 @@ void nsFocusManager::SetFocusInner(Element* aNewContent, int32_t aFlags,
             GetCommonAncestor(newWindow, GetFocusedBrowsingContext());
       }
 
-      nsCOMPtr<nsPIDOMWindowOuter> focusedWindow;
-      if (currentIsSameOrAncestor) {
-        RefPtr<BrowsingContext> focusedBrowsingContext =
-            GetFocusedBrowsingContext();
-        if (focusedBrowsingContext) {
-          focusedWindow = focusedBrowsingContext->GetDOMWindow();
-        }
-      }
-      if (!Blur(focusedWindow,
-                commonAncestor ? commonAncestor->GetDOMWindow() : nullptr,
+      if (!Blur(currentIsSameOrAncestor ? GetFocusedBrowsingContext() : nullptr,
+                commonAncestor ? commonAncestor.get() : nullptr,
                 !isElementInFocusedWindow, aAdjustWidget, elementToFocus)) {
         return;
       }
@@ -1750,10 +1742,48 @@ Element* nsFocusManager::FlushAndCheckIfFocusable(Element* aElement,
                                                             : nullptr;
 }
 
-bool nsFocusManager::Blur(nsPIDOMWindowOuter* aWindowToClear,
-                          nsPIDOMWindowOuter* aAncestorWindowToFocus,
+bool nsFocusManager::Blur(BrowsingContext* aWindowToClear,
+                          BrowsingContext* aAncestorWindowToFocus,
                           bool aIsLeavingDocument, bool aAdjustWidgets,
                           nsIContent* aContentToFocus) {
+  if (XRE_IsParentProcess()) {
+    return BlurImpl(aWindowToClear, aAncestorWindowToFocus, aIsLeavingDocument,
+                    aAdjustWidgets, aContentToFocus);
+  }
+  RefPtr<BrowsingContext> focusedBrowsingContext = GetFocusedBrowsingContext();
+  if (focusedBrowsingContext->IsInProcess()) {
+    if (!aWindowToClear->IsInProcess()) {
+      // XXX IPC
+    }
+    if (!aAncestorWindowToFocus->IsInProcess()) {
+      // XXX IPC
+    }
+    return BlurImpl(aWindowToClear, aAncestorWindowToFocus, aIsLeavingDocument,
+                    aAdjustWidgets, aContentToFocus);
+  }
+  if (aWindowToClear->IsInProcess()) {
+    nsPIDOMWindowOuter* windowToClear = aWindowToClear->GetDOMWindow();
+    MOZ_ASSERT(windowToClear);
+    windowToClear->SetFocusedElement(nullptr);
+  } else if (false) {
+    // XXX IPC
+  }
+  if (aAncestorWindowToFocus->IsInProcess()) {
+    nsPIDOMWindowOuter* ancestorWindowToFocus =
+        aAncestorWindowToFocus->GetDOMWindow();
+    MOZ_ASSERT(ancestorWindowToFocus);
+    ancestorWindowToFocus->SetFocusedElement(nullptr, 0, true);
+  } else if (false) {
+    // XXX IPC
+  }
+  // XXX IPC
+  return true;
+}
+
+bool nsFocusManager::BlurImpl(BrowsingContext* aWindowToClear,
+                              BrowsingContext* aAncestorWindowToFocus,
+                              bool aIsLeavingDocument, bool aAdjustWidgets,
+                              nsIContent* aContentToFocus) {
   LOGFOCUS(("<<Blur begin>>"));
 
   // hold a reference to the focused content, which may be null
@@ -1766,8 +1796,12 @@ bool nsFocusManager::Blur(nsPIDOMWindowOuter* aWindowToClear,
     if (element == mFirstBlurEvent) return true;
   }
 
+  RefPtr<BrowsingContext> focusedBrowsingContext = GetFocusedBrowsingContext();
   // hold a reference to the focused window
-  nsCOMPtr<nsPIDOMWindowOuter> window = mFocusedWindow;
+  nsCOMPtr<nsPIDOMWindowOuter> window;
+  if (focusedBrowsingContext) {
+    window = focusedBrowsingContext->GetDOMWindow();
+  }
   if (!window) {
     mFocusedElement = nullptr;
     return true;
@@ -1776,6 +1810,7 @@ bool nsFocusManager::Blur(nsPIDOMWindowOuter* aWindowToClear,
   nsCOMPtr<nsIDocShell> docShell = window->GetDocShell();
   if (!docShell) {
     mFocusedWindow = nullptr;
+    // XXX Do we really want to set the focused browsing context here?
     SetFocusedBrowsingContext(nullptr);
     mFocusedElement = nullptr;
     return true;
@@ -1787,6 +1822,7 @@ bool nsFocusManager::Blur(nsPIDOMWindowOuter* aWindowToClear,
   if (!presShell) {
     mFocusedElement = nullptr;
     mFocusedWindow = nullptr;
+    // XXX Do we really want to set the focused browsing context here?
     SetFocusedBrowsingContext(nullptr);
     return true;
   }
@@ -1806,7 +1842,12 @@ bool nsFocusManager::Blur(nsPIDOMWindowOuter* aWindowToClear,
   // and in the window.
   mFocusedElement = nullptr;
   bool shouldShowFocusRing = window->ShouldShowFocusRing();
-  if (aWindowToClear) aWindowToClear->SetFocusedElement(nullptr);
+  if (aWindowToClear) {
+    nsPIDOMWindowOuter* windowToClear = aWindowToClear->GetDOMWindow();
+    if (windowToClear) {
+      windowToClear->SetFocusedElement(nullptr);
+    }
+  }
 
   LOGCONTENT("Element %s has been blurred", element.get());
 
@@ -1897,7 +1938,7 @@ bool nsFocusManager::Blur(nsPIDOMWindowOuter* aWindowToClear,
   // the blur event above and we should just return. However, if
   // aIsLeavingDocument is set, a new document is desired, so make sure to
   // blur the document and window.
-  if (mFocusedWindow != window ||
+  if (GetFocusedBrowsingContext() != window->GetBrowsingContext() ||
       (mFocusedElement != nullptr && !aIsLeavingDocument)) {
     result = false;
   } else if (aIsLeavingDocument) {
@@ -1906,8 +1947,13 @@ bool nsFocusManager::Blur(nsPIDOMWindowOuter* aWindowToClear,
     // clear the focus so that the ancestor frame hierarchy is in the correct
     // state. Pass true because aAncestorWindowToFocus is thought to be
     // focused at this point.
-    if (aAncestorWindowToFocus)
-      aAncestorWindowToFocus->SetFocusedElement(nullptr, 0, true);
+    if (aAncestorWindowToFocus) {
+      nsPIDOMWindowOuter* ancestorWindowToFocus =
+          aAncestorWindowToFocus->GetDOMWindow();
+      if (ancestorWindowToFocus) {
+        ancestorWindowToFocus->SetFocusedElement(nullptr, 0, true);
+      }
+    }
 
     SetFocusedWindowInternal(nullptr);
     mFocusedElement = nullptr;
@@ -1918,12 +1964,12 @@ bool nsFocusManager::Blur(nsPIDOMWindowOuter* aWindowToClear,
     Document* doc = window->GetExtantDoc();
     if (doc)
       SendFocusOrBlurEvent(eBlur, presShell, doc, ToSupports(doc), 1, false);
-    if (mFocusedWindow == nullptr)
+    if (!GetFocusedBrowsingContext())
       SendFocusOrBlurEvent(eBlur, presShell, doc,
                            window->GetCurrentInnerWindow(), 1, false);
 
     // check if a different window was focused
-    result = (mFocusedWindow == nullptr && mActiveWindow);
+    result = (!GetFocusedBrowsingContext() && mActiveWindow);
   } else if (mActiveWindow) {
     // Otherwise, the blur of the element without blurring the document
     // occurred normally. Call UpdateCaret to redisplay the caret at the right
@@ -3051,7 +3097,7 @@ nsresult nsFocusManager::DetermineElementToMoveFocus(
       if (tookFocus) {
         nsCOMPtr<nsPIDOMWindowOuter> window = docShell->GetWindow();
         if (window->GetFocusedElement() == mFocusedElement)
-          Blur(mFocusedWindow, nullptr, true, true);
+          Blur(GetFocusedBrowsingContext(), nullptr, true, true);
         else
           window->SetFocusedElement(nullptr);
         return NS_OK;
