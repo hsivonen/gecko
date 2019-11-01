@@ -1411,7 +1411,15 @@ void nsFocusManager::SetFocusInner(Element* aNewContent, int32_t aFlags,
             GetCommonAncestor(newWindow, GetFocusedBrowsingContext());
       }
 
-      if (!Blur(currentIsSameOrAncestor ? mFocusedWindow.get() : nullptr,
+      nsCOMPtr<nsPIDOMWindowOuter> focusedWindow;
+      if (currentIsSameOrAncestor) {
+        RefPtr<BrowsingContext> focusedBrowsingContext =
+            GetFocusedBrowsingContext();
+        if (focusedBrowsingContext) {
+          focusedWindow = focusedBrowsingContext->GetDOMWindow();
+        }
+      }
+      if (!Blur(focusedWindow,
                 commonAncestor ? commonAncestor->GetDOMWindow() : nullptr,
                 !isElementInFocusedWindow, aAdjustWidget, elementToFocus)) {
         return;
