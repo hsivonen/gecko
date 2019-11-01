@@ -96,10 +96,13 @@ class nsFocusManager final : public nsIFocusManager,
   nsPIDOMWindowOuter* GetFocusedWindow() const { return mFocusedWindow; }
 
   mozilla::dom::BrowsingContext* GetFocusedBrowsingContext() const {
-    if (mFocusedWindow) {
-      return mFocusedWindow->GetBrowsingContext();
+    if (XRE_IsParentProcess()) {
+      if (mFocusedWindow) {
+        return mFocusedWindow->GetBrowsingContext();
+      }
+      return nullptr;
     }
-    return nullptr;
+    return mFocusedBrowsingContext;
   }
 
   /**
@@ -666,6 +669,10 @@ class nsFocusManager final : public nsIFocusManager,
                                    bool aForward, bool aForDocumentNavigation,
                                    nsIContent** aResultContent);
 
+  void SetFocusedBrowsingContext(mozilla::dom::BrowsingContext* aContext);
+
+  void SetActiveBrowsingContext(mozilla::dom::BrowsingContext* aContext);
+
   // the currently active and front-most top-most window
   nsCOMPtr<nsPIDOMWindowOuter> mActiveWindow;
 
@@ -675,6 +682,8 @@ class nsFocusManager final : public nsIFocusManager,
   // either be the same window as mActiveWindow or a descendant of it.
   // Except during shutdown use SetFocusedWindowInternal to set mFocusedWindow!
   nsCOMPtr<nsPIDOMWindowOuter> mFocusedWindow;
+
+  RefPtr<mozilla::dom::BrowsingContext> mFocusedBrowsingContext;
 
   // the currently focused content, which is always inside mFocusedWindow. This
   // is a cached copy of the mFocusedWindow's current content. This may be null

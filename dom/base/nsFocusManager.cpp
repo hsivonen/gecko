@@ -156,9 +156,9 @@ NS_IMPL_CYCLE_COLLECTING_ADDREF(nsFocusManager)
 NS_IMPL_CYCLE_COLLECTING_RELEASE(nsFocusManager)
 
 NS_IMPL_CYCLE_COLLECTION(nsFocusManager, mActiveWindow, mActiveBrowsingContext,
-                         mFocusedWindow, mFocusedElement, mFirstBlurEvent,
-                         mFirstFocusEvent, mWindowBeingLowered,
-                         mDelayedBlurFocusEvents,
+                         mFocusedWindow, mFocusedBrowsingContext,
+                         mFocusedElement, mFirstBlurEvent, mFirstFocusEvent,
+                         mWindowBeingLowered, mDelayedBlurFocusEvents,
                          mMouseButtonEventHandlingDocument)
 
 nsFocusManager* nsFocusManager::sInstance = nullptr;
@@ -239,6 +239,7 @@ nsFocusManager::Observe(nsISupports* aSubject, const char* aTopic,
     mActiveWindow = nullptr;
     mActiveBrowsingContext = nullptr;
     mFocusedWindow = nullptr;
+    mFocusedBrowsingContext = nullptr;
     mFocusedElement = nullptr;
     mFirstBlurEvent = nullptr;
     mFirstFocusEvent = nullptr;
@@ -695,7 +696,7 @@ nsFocusManager::WindowRaised(mozIDOMWindowProxy* aWindow) {
   if (!XRE_IsParentProcess()) {
     BrowsingContext* bc = window->GetBrowsingContext();
     if (bc == bc->Top()) {
-      mActiveBrowsingContext = bc;
+      SetActiveBrowsingContext(bc);
     }
   }
 
@@ -792,7 +793,7 @@ nsFocusManager::WindowLowered(mozIDOMWindowProxy* aWindow) {
   if (!XRE_IsParentProcess()) {
     BrowsingContext* bc = window->GetBrowsingContext();
     if (bc == bc->Top()) {
-      mActiveBrowsingContext = nullptr;
+      SetActiveBrowsingContext(nullptr);
     }
   }
 
@@ -1238,7 +1239,7 @@ void nsFocusManager::SetFocusInner(Element* aNewContent, int32_t aFlags,
     docShell = do_QueryInterface(parentDsti);
     if (!docShell && !XRE_IsParentProcess()) {
       // We don't have an in-process parent, but let's see if we have
-      // an in-process ascestor or if an out-of-process ancestor
+      // an in-process ancestor or if an out-of-process ancestor
       // is discarded.
       do {
         bc = bc->GetParent();
@@ -1775,6 +1776,7 @@ bool nsFocusManager::Blur(nsPIDOMWindowOuter* aWindowToClear,
   nsCOMPtr<nsIDocShell> docShell = window->GetDocShell();
   if (!docShell) {
     mFocusedWindow = nullptr;
+    SetFocusedBrowsingContext(nullptr);
     mFocusedElement = nullptr;
     return true;
   }
@@ -1785,6 +1787,7 @@ bool nsFocusManager::Blur(nsPIDOMWindowOuter* aWindowToClear,
   if (!presShell) {
     mFocusedElement = nullptr;
     mFocusedWindow = nullptr;
+    SetFocusedBrowsingContext(nullptr);
     return true;
   }
 
@@ -4203,6 +4206,16 @@ class PointerUnlocker : public Runnable {
 
 PointerUnlocker* PointerUnlocker::sActiveUnlocker = nullptr;
 
+void nsFocusManager::SetFocusedBrowsingContext(
+    mozilla::dom::BrowsingContext* aContext) {
+  mFocusedBrowsingContext = aContext;
+}
+
+void nsFocusManager::SetActiveBrowsingContext(
+    mozilla::dom::BrowsingContext* aContext) {
+  mActiveBrowsingContext = aContext;
+}
+
 void nsFocusManager::SetFocusedWindowInternal(nsPIDOMWindowOuter* aWindow) {
   if (!PointerUnlocker::sActiveUnlocker &&
       nsContentUtils::IsInPointerLockContext(mFocusedWindow) &&
@@ -4221,6 +4234,7 @@ void nsFocusManager::SetFocusedWindowInternal(nsPIDOMWindowOuter* aWindow) {
   }
 
   mFocusedWindow = aWindow;
+  SetFocusedBrowsingContext(aWindow ? aWindow->GetBrowsingContext() : nullptr);
 }
 
 void nsFocusManager::MarkUncollectableForCCGeneration(uint32_t aGeneration) {
