@@ -896,6 +896,7 @@ nsFocusManager::WindowShown(mozIDOMWindowProxy* aWindow, bool aNeedsFocus) {
     }
   }
 
+  // XXX should this use BrowsingContext or not?
   if (mFocusedWindow != window) return NS_OK;
 
   if (aNeedsFocus) {
@@ -4370,14 +4371,25 @@ bool nsFocusManager::CanSkipFocus(nsIContent* aContent) {
     return true;
   }
 
-  nsCOMPtr<nsIDocShellTreeItem> root;
-  ds->GetInProcessRootTreeItem(getter_AddRefs(root));
-  nsCOMPtr<nsPIDOMWindowOuter> newRootWindow =
-      root ? root->GetWindow() : nullptr;
-  if (mActiveWindow != newRootWindow) {
-    nsPIDOMWindowOuter* outerWindow = aContent->OwnerDoc()->GetWindow();
-    if (outerWindow && outerWindow->GetFocusedElement() == aContent) {
-      return true;
+  if (XRE_IsParentProcess()) {
+    nsCOMPtr<nsIDocShellTreeItem> root;
+    ds->GetInProcessRootTreeItem(getter_AddRefs(root));
+    nsCOMPtr<nsPIDOMWindowOuter> newRootWindow =
+        root ? root->GetWindow() : nullptr;
+    if (mActiveWindow != newRootWindow) {
+      nsPIDOMWindowOuter* outerWindow = aContent->OwnerDoc()->GetWindow();
+      if (outerWindow && outerWindow->GetFocusedElement() == aContent) {
+        return true;
+      }
+    }
+  } else {
+    BrowsingContext* bc = aContent->OwnerDoc()->GetBrowsingContext();
+    BrowsingContext* top = bc ? bc->Top() : nullptr;
+    if (GetActiveBrowsingContext() != top) {
+      nsPIDOMWindowOuter* outerWindow = aContent->OwnerDoc()->GetWindow();
+      if (outerWindow && outerWindow->GetFocusedElement() == aContent) {
+        return true;
+      }
     }
   }
 
