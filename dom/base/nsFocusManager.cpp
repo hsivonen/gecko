@@ -556,8 +556,9 @@ nsFocusManager::ClearFocus(mozIDOMWindowProxy* aWindow) {
   NS_ENSURE_TRUE(aWindow, NS_ERROR_INVALID_ARG);
   nsCOMPtr<nsPIDOMWindowOuter> window = nsPIDOMWindowOuter::From(aWindow);
 
-  if (IsSameOrAncestor(window, mFocusedWindow)) {
-    bool isAncestor = (window != mFocusedWindow);
+  if (IsSameOrAncestor(window, GetFocusedBrowsingContext())) {
+    bool isAncestor =
+        (GetFocusedBrowsingContext() != window->GetBrowsingContext());
     if (Blur(window->GetBrowsingContext(), nullptr, isAncestor, true)) {
       // if we are clearing the focus on an ancestor of the focused window,
       // the ancestor will become the new focused window, so focus it
@@ -2203,7 +2204,8 @@ void nsFocusManager::Focus(nsPIDOMWindowOuter* aWindow, Element* aElement,
     // If the window focus event (fired above when aIsNewDocument) caused
     // the plugin not to be focusable, update the system focus by focusing
     // the root widget.
-    if (aAdjustWidget && objectFrameWidget && mFocusedWindow == aWindow &&
+    if (aAdjustWidget && objectFrameWidget &&
+        GetFocusedBrowsingContext() == aWindow->GetBrowsingContext() &&
         mFocusedElement == nullptr && !sTestMode) {
       if (nsViewManager* vm = presShell->GetViewManager()) {
         nsCOMPtr<nsIWidget> widget;
