@@ -2135,7 +2135,8 @@ void nsFocusManager::Focus(nsPIDOMWindowOuter* aWindow, Element* aElement,
       SendFocusOrBlurEvent(eFocus, presShell, doc, ToSupports(doc),
                            aFlags & FOCUSMETHOD_MASK, aWindowRaised);
     }
-    if (mFocusedWindow == aWindow && mFocusedElement == nullptr) {
+    if (GetFocusedBrowsingContext() == aWindow->GetBrowsingContext() &&
+        mFocusedElement == nullptr) {
       SendFocusOrBlurEvent(eFocus, presShell, doc,
                            aWindow->GetCurrentInnerWindow(),
                            aFlags & FOCUSMETHOD_MASK, aWindowRaised);
@@ -2144,7 +2145,8 @@ void nsFocusManager::Focus(nsPIDOMWindowOuter* aWindow, Element* aElement,
 
   // check to ensure that the element is still focusable, and that nothing
   // else was focused during the events above.
-  if (FlushAndCheckIfFocusable(aElement, aFlags) && mFocusedWindow == aWindow &&
+  if (FlushAndCheckIfFocusable(aElement, aFlags) &&
+      GetFocusedBrowsingContext() == aWindow->GetBrowsingContext() &&
       mFocusedElement == nullptr) {
     mFocusedElement = aElement;
 
