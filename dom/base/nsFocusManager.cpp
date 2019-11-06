@@ -824,7 +824,7 @@ nsresult nsFocusManager::ContentRemoved(Document* aDocument,
 
     // if this window is currently focused, clear the global focused
     // element as well, but don't fire any events.
-    if (window == mFocusedWindow) {
+    if (window->GetBrowsingContext() == GetFocusedBrowsingContext()) {
       mFocusedElement = nullptr;
     } else {
       // Check if the node that was focused is an iframe or similar by looking
@@ -837,7 +837,8 @@ nsresult nsFocusManager::ContentRemoved(Document* aDocument,
         nsCOMPtr<nsIDocShell> docShell = subdoc->GetDocShell();
         if (docShell) {
           nsCOMPtr<nsPIDOMWindowOuter> childWindow = docShell->GetWindow();
-          if (childWindow && IsSameOrAncestor(childWindow, mFocusedWindow)) {
+          if (childWindow &&
+              IsSameOrAncestor(childWindow, GetFocusedBrowsingContext())) {
             ClearFocus(mActiveWindow);
           }
         }
