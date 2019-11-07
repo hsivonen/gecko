@@ -683,6 +683,9 @@ class nsFocusManager final : public nsIFocusManager,
 
   void SetFocusedBrowsingContext(mozilla::dom::BrowsingContext* aContext);
 
+  void SetFocusedBrowsingContextFromOtherProcess(
+      mozilla::dom::BrowsingContext* aContext);
+
   void SetActiveBrowsingContext(mozilla::dom::BrowsingContext* aContext);
 
   // the currently active and front-most top-most window

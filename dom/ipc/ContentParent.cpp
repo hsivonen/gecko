@@ -6125,6 +6125,26 @@ mozilla::ipc::IPCResult ContentParent::RecvClearFocus(
   return IPC_OK();
 }
 
+mozilla::ipc::IPCResult ContentParent::RecvSetFocusedBrowsingContext(
+    BrowsingContext* aContext) {
+  if (!aContext || aContext->IsDiscarded()) {
+    MOZ_LOG(
+        BrowsingContext::GetLog(), LogLevel::Debug,
+        ("ParentIPC: Trying to send a message to dead or detached context"));
+    return IPC_OK();
+  }
+
+  // XXX Set focused BrowserParent
+
+  aContext->Group()->EachOtherParent(this, [&](ContentParent* aParent) {
+    if (this->Pid() != aParent->Pid()) {
+      Unused << aParent->SendSetFocusedBrowsingContext(aContext);
+    }
+  });
+
+  return IPC_OK();
+}
+
 mozilla::ipc::IPCResult ContentParent::RecvSetFocusedElement(
     BrowsingContext* aSetToFalse, BrowsingContext* aSetToTrue) {
   bool haveToFalse = aSetToFalse && !aSetToFalse->IsDiscarded();

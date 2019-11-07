@@ -4098,6 +4098,21 @@ mozilla::ipc::IPCResult ContentChild::RecvClearFocus(
   return IPC_OK();
 }
 
+mozilla::ipc::IPCResult ContentChild::RecvSetFocusedBrowsingContext(
+    BrowsingContext* aContext) {
+  if (!aContext) {
+    MOZ_LOG(BrowsingContext::GetLog(), LogLevel::Debug,
+            ("ChildIPC: Trying to send a message to dead or detached context"));
+    return IPC_OK();
+  }
+
+  nsFocusManager* fm = nsFocusManager::GetFocusManager();
+  if (fm) {
+    fm->SetFocusedBrowsingContextFromOtherProcess(aContext);
+  }
+  return IPC_OK();
+}
+
 mozilla::ipc::IPCResult ContentChild::RecvSetFocusedElement(
     BrowsingContext* aSetToFalse, BrowsingContext* aSetToTrue) {
   if (!aSetToFalse && !aSetToTrue) {

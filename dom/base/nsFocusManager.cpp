@@ -4307,9 +4307,24 @@ class PointerUnlocker : public Runnable {
 
 PointerUnlocker* PointerUnlocker::sActiveUnlocker = nullptr;
 
-void nsFocusManager::SetFocusedBrowsingContext(
-    mozilla::dom::BrowsingContext* aContext) {
+void nsFocusManager::SetFocusedBrowsingContext(BrowsingContext* aContext) {
   mFocusedBrowsingContext = aContext;
+  if (aContext && !XRE_IsParentProcess()) {
+    MOZ_ASSERT(aContext->IsInProcess());
+    mozilla::dom::ContentChild* contentChild =
+        mozilla::dom::ContentChild::GetSingleton();
+    MOZ_ASSERT(contentChild);
+    contentChild->SendSetFocusedBrowsingContext(aContext);
+  }
+}
+
+void nsFocusManager::SetFocusedBrowsingContextFromOtherProcess(
+    BrowsingContext* aContext) {
+  MOZ_ASSERT(!XRE_IsParentProcess());
+  MOZ_ASSERT(aContext);
+  MOZ_ASSERT(!aContext->IsInProcess());
+  mFocusedBrowsingContext = aContext;
+  mFocusedElement = nullptr;
 }
 
 void nsFocusManager::SetActiveBrowsingContext(
