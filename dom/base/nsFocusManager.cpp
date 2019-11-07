@@ -839,7 +839,21 @@ nsresult nsFocusManager::ContentRemoved(Document* aDocument,
           nsCOMPtr<nsPIDOMWindowOuter> childWindow = docShell->GetWindow();
           if (childWindow &&
               IsSameOrAncestor(childWindow, GetFocusedBrowsingContext())) {
-            ClearFocus(mActiveWindow);
+            if (XRE_IsParentProcess()) {
+              ClearFocus(mActiveWindow);
+            } else {
+              BrowsingContext* active = GetActiveBrowsingContext();
+              if (active) {
+                if (active->IsInProcess()) {
+                  ClearFocus(active->GetDOMWindow());
+                } else {
+                  mozilla::dom::ContentChild* contentChild =
+                      mozilla::dom::ContentChild::GetSingleton();
+                  MOZ_ASSERT(contentChild);
+                  contentChild->SendClearFocus(active);
+                }
+              }  // no else, because ClearFocus does nothing with nullptr
+            }
           }
         }
       }

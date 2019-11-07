@@ -646,6 +646,7 @@ class ContentParent final : public PContentParent,
   mozilla::ipc::IPCResult RecvWindowBlur(BrowsingContext* aContext);
   mozilla::ipc::IPCResult RecvRaiseWindow(BrowsingContext* aContext);
   mozilla::ipc::IPCResult RecvWindowLowered(BrowsingContext* aContext);
+  mozilla::ipc::IPCResult RecvClearFocus(BrowsingContext* aContext);
   mozilla::ipc::IPCResult RecvSetFocusedElement(BrowsingContext* aSetToFalse,
                                                 BrowsingContext* aSetToTrue);
   mozilla::ipc::IPCResult RecvBlurToParent(

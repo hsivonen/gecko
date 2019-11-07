@@ -4075,6 +4075,29 @@ mozilla::ipc::IPCResult ContentChild::RecvWindowLowered(
   return IPC_OK();
 }
 
+mozilla::ipc::IPCResult ContentChild::RecvClearFocus(
+    BrowsingContext* aContext) {
+  if (!aContext) {
+    MOZ_LOG(BrowsingContext::GetLog(), LogLevel::Debug,
+            ("ChildIPC: Trying to send a message to dead or detached context"));
+    return IPC_OK();
+  }
+
+  nsCOMPtr<nsPIDOMWindowOuter> window = aContext->GetDOMWindow();
+  if (!window) {
+    MOZ_LOG(
+        BrowsingContext::GetLog(), LogLevel::Debug,
+        ("ChildIPC: Trying to send a message to a context without a window"));
+    return IPC_OK();
+  }
+
+  nsFocusManager* fm = nsFocusManager::GetFocusManager();
+  if (fm) {
+    fm->ClearFocus(window);
+  }
+  return IPC_OK();
+}
+
 mozilla::ipc::IPCResult ContentChild::RecvSetFocusedElement(
     BrowsingContext* aSetToFalse, BrowsingContext* aSetToTrue) {
   if (!aSetToFalse && !aSetToTrue) {
