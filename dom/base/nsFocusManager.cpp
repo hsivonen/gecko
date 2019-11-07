@@ -1872,7 +1872,7 @@ bool nsFocusManager::BlurImpl(BrowsingContext* aWindowToClear,
   }
 
   nsPresContext* focusedPresContext =
-      mActiveWindow ? presShell->GetPresContext() : nullptr;
+      GetActiveBrowsingContext() ? presShell->GetPresContext() : nullptr;
   IMEStateManager::OnChangeFocus(focusedPresContext, nullptr,
                                  GetFocusMoveActionCause(0));
 
@@ -1902,7 +1902,7 @@ bool nsFocusManager::BlurImpl(BrowsingContext* aWindowToClear,
     // focus to the parent window, otherwise events will still get fired at the
     // plugin. But don't do this if we are blurring due to the window being
     // lowered, otherwise, the parent window can get raised again.
-    if (mActiveWindow) {
+    if (GetActiveBrowsingContext()) {
       nsIFrame* contentFrame = element->GetPrimaryFrame();
       nsIObjectFrame* objectFrame = do_QueryFrame(contentFrame);
       if (aAdjustWidget && objectFrame && !sTestMode) {
@@ -1951,7 +1951,7 @@ bool nsFocusManager::BlurImpl(BrowsingContext* aWindowToClear,
     // if there is an active window, update commands. If there isn't an active
     // window, then this was a blur caused by the active window being lowered,
     // so there is no need to update the commands
-    if (mActiveWindow)
+    if (GetActiveBrowsingContext())
       window->UpdateCommands(NS_LITERAL_STRING("focus"), nullptr, 0);
 
     SendFocusOrBlurEvent(eBlur, presShell, element->GetComposedDoc(), element,
@@ -1960,14 +1960,14 @@ bool nsFocusManager::BlurImpl(BrowsingContext* aWindowToClear,
 
   // if we are leaving the document or the window was lowered, make the caret
   // invisible.
-  if (aIsLeavingDocument || !mActiveWindow) {
+  if (aIsLeavingDocument || !GetActiveBrowsingContext()) {
     SetCaretVisible(presShell, false, nullptr);
   }
 
   RefPtr<AccessibleCaretEventHub> eventHub =
       presShell->GetAccessibleCaretEventHub();
   if (eventHub) {
-    eventHub->NotifyBlur(aIsLeavingDocument || !mActiveWindow);
+    eventHub->NotifyBlur(aIsLeavingDocument || !GetActiveBrowsingContext());
   }
 
   // at this point, it is expected that this window will be still be
@@ -2007,8 +2007,8 @@ bool nsFocusManager::BlurImpl(BrowsingContext* aWindowToClear,
                            window->GetCurrentInnerWindow(), 1, false);
 
     // check if a different window was focused
-    result = (!GetFocusedBrowsingContext() && mActiveWindow);
-  } else if (mActiveWindow) {
+    result = (!GetFocusedBrowsingContext() && GetActiveBrowsingContext());
+  } else if (GetActiveBrowsingContext()) {
     // Otherwise, the blur of the element without blurring the document
     // occurred normally. Call UpdateCaret to redisplay the caret at the right
     // location within the document. This is needed to ensure that the caret
