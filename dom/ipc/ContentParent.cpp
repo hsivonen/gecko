@@ -6137,9 +6137,7 @@ mozilla::ipc::IPCResult ContentParent::RecvSetFocusedBrowsingContext(
   // XXX Set focused BrowserParent
 
   aContext->Group()->EachOtherParent(this, [&](ContentParent* aParent) {
-    if (this->Pid() != aParent->Pid()) {
-      Unused << aParent->SendSetFocusedBrowsingContext(aContext);
-    }
+    Unused << aParent->SendSetFocusedBrowsingContext(aContext);
   });
 
   return IPC_OK();

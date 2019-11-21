@@ -4322,7 +4322,15 @@ void nsFocusManager::SetFocusedBrowsingContextFromOtherProcess(
     BrowsingContext* aContext) {
   MOZ_ASSERT(!XRE_IsParentProcess());
   MOZ_ASSERT(aContext);
-  MOZ_ASSERT(!aContext->IsInProcess());
+  if (aContext->IsInProcess()) {
+    // This message has been in transit for long enough that
+    // the process association of aContext has changed since
+    // the other content process sent the message, because
+    // an iframe in that process became an out-of-process
+    // iframe while the IPC broadcast that we're receiving
+    // was in-flight. Let's just ignore this.
+    return;
+  }
   mFocusedBrowsingContext = aContext;
   mFocusedElement = nullptr;
 }
