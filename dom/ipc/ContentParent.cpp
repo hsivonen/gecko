@@ -6137,6 +6137,7 @@ mozilla::ipc::IPCResult ContentParent::RecvSetFocusedBrowsingContext(
   nsFocusManager* fm = nsFocusManager::GetFocusManager();
   if (fm) {
     fm->SetFocusedBrowsingContextChromeCache(aContext);
+    BrowserParent::UpdateFocusFromBrowsingContext();
   }
 
   aContext->Group()->EachOtherParent(this, [&](ContentParent* aParent) {

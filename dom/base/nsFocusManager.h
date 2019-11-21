@@ -34,7 +34,6 @@ struct FocusOptions;
 class BrowserParent;
 class ContentChild;
 class ContentParent;
-class BrowsingContextGroup;
 }  // namespace dom
 }  // namespace mozilla
 
@@ -52,7 +51,6 @@ class nsFocusManager final : public nsIFocusManager,
   typedef mozilla::dom::Document Document;
   friend class mozilla::dom::ContentChild;
   friend class mozilla::dom::ContentParent;
-  friend class mozilla::dom::BrowsingContextGroup;
 
  public:
   NS_DECL_CYCLE_COLLECTION_CLASS_AMBIGUOUS(nsFocusManager, nsIFocusManager)
@@ -695,9 +693,11 @@ class nsFocusManager final : public nsIFocusManager,
   void SetFocusedBrowsingContextChromeCache(
       mozilla::dom::BrowsingContext* aContext);
 
+ public:
   // Chrome-only
   mozilla::dom::BrowsingContext* GetFocusedBrowsingContextChromeCache();
 
+ private:
   // Content-only
   void SetActiveBrowsingContext(mozilla::dom::BrowsingContext* aContext);
 
@@ -713,9 +713,11 @@ class nsFocusManager final : public nsIFocusManager,
   void SetActiveBrowsingContextChromeCache(
       mozilla::dom::BrowsingContext* aContext);
 
+ public:
   // Chrome-only
   mozilla::dom::BrowsingContext* GetActiveBrowsingContextChromeCache();
 
+ private:
   // the currently active and front-most top-most window
   nsCOMPtr<nsPIDOMWindowOuter> mActiveWindow;
 
