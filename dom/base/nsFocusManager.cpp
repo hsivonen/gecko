@@ -1337,10 +1337,10 @@ void nsFocusManager::SetFocusInner(Element* aNewContent, int32_t aFlags,
     // new root docshell for the new element with the active window's docshell.
     isElementInActiveWindow =
         (GetActiveBrowsingContext() == newRootBrowsingContext);
-    bool debugIsElementInActiveWindow =
-        (mActiveWindow && (mActiveWindow->GetBrowsingContext()->Top() ==
-                           newRootBrowsingContext));
-    MOZ_ASSERT(isElementInActiveWindow == debugIsElementInActiveWindow);
+    // bool debugIsElementInActiveWindow =
+    //     (mActiveWindow && (mActiveWindow->GetBrowsingContext()->Top() ==
+    //                        newRootBrowsingContext));
+    // MOZ_ASSERT(isElementInActiveWindow == debugIsElementInActiveWindow);
   }
 
   // Exit fullscreen if we're focusing a windowed plugin on a non-MacOSX
@@ -1774,9 +1774,18 @@ bool nsFocusManager::Blur(BrowsingContext* aWindowToClear,
   bool ancestorWindowToFocusHandled = false;
 
   RefPtr<BrowsingContext> focusedBrowsingContext = GetFocusedBrowsingContext();
+  if (focusedBrowsingContext && focusedBrowsingContext->IsDiscarded()) {
+    focusedBrowsingContext = nullptr;
+  }
   if (!focusedBrowsingContext) {
     mFocusedElement = nullptr;
     return true;
+  }
+  if (aWindowToClear && aWindowToClear->IsDiscarded()) {
+    aWindowToClear = nullptr;
+  }
+  if (aAncestorWindowToFocus && aAncestorWindowToFocus->IsDiscarded()) {
+    aAncestorWindowToFocus = nullptr;
   }
   // XXX should more early returns from BlurImpl be hoisted here to avoid
   // proscessing aWindowToClear and aAncestorWindowToFocus in other processes
