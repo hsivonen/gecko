@@ -1548,6 +1548,8 @@ both:
     async WindowLowered(BrowsingContext aContext);
     async ClearFocus(BrowsingContext aContext);
     async SetFocusedBrowsingContext(BrowsingContext aContext);
+    async SetActiveBrowsingContext(BrowsingContext aContext);
+    async UnsetActiveBrowsingContext(BrowsingContext aContext);
     async SetFocusedElement(BrowsingContext aSetToFalse, BrowsingContext aSetToTrue);
 parent:
     async BlurToParent(BrowsingContext aFocusedBrowsingContext, BrowsingContext aWindowToClear,

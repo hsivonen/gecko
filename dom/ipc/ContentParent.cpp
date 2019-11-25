@@ -6143,6 +6143,38 @@ mozilla::ipc::IPCResult ContentParent::RecvSetFocusedBrowsingContext(
   return IPC_OK();
 }
 
+mozilla::ipc::IPCResult ContentParent::RecvSetActiveBrowsingContext(
+    BrowsingContext* aContext) {
+  if (!aContext || aContext->IsDiscarded()) {
+    MOZ_LOG(
+        BrowsingContext::GetLog(), LogLevel::Debug,
+        ("ParentIPC: Trying to send a message to dead or detached context"));
+    return IPC_OK();
+  }
+
+  aContext->Group()->EachOtherParent(this, [&](ContentParent* aParent) {
+    Unused << aParent->SendSetActiveBrowsingContext(aContext);
+  });
+
+  return IPC_OK();
+}
+
+mozilla::ipc::IPCResult ContentParent::RecvUnsetActiveBrowsingContext(
+    BrowsingContext* aContext) {
+  if (!aContext || aContext->IsDiscarded()) {
+    MOZ_LOG(
+        BrowsingContext::GetLog(), LogLevel::Debug,
+        ("ParentIPC: Trying to send a message to dead or detached context"));
+    return IPC_OK();
+  }
+
+  aContext->Group()->EachOtherParent(this, [&](ContentParent* aParent) {
+    Unused << aParent->SendUnsetActiveBrowsingContext(aContext);
+  });
+
+  return IPC_OK();
+}
+
 mozilla::ipc::IPCResult ContentParent::RecvSetFocusedElement(
     BrowsingContext* aSetToFalse, BrowsingContext* aSetToTrue) {
   bool haveToFalse = aSetToFalse && !aSetToFalse->IsDiscarded();

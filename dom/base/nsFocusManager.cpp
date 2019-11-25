@@ -52,6 +52,7 @@
 #include "mozilla/dom/HTMLSlotElement.h"
 #include "mozilla/dom/BrowserBridgeChild.h"
 #include "mozilla/dom/Text.h"
+#include "mozilla/dom/WindowGlobalChild.h"
 #include "mozilla/EventDispatcher.h"
 #include "mozilla/EventStateManager.h"
 #include "mozilla/EventStates.h"
@@ -4346,7 +4347,53 @@ void nsFocusManager::SetFocusedBrowsingContextFromOtherProcess(
 
 void nsFocusManager::SetActiveBrowsingContext(
     mozilla::dom::BrowsingContext* aContext) {
+  MOZ_ASSERT(!XRE_IsParentProcess());
+  MOZ_ASSERT(!aContext || aContext->IsInProcess());
+  mozilla::dom::ContentChild* contentChild =
+      mozilla::dom::ContentChild::GetSingleton();
+  MOZ_ASSERT(contentChild);
+  if (aContext) {
+    contentChild->SendSetActiveBrowsingContext(aContext);
+  } else if (mActiveBrowsingContext) {
+    // We want to sync this over only if this isn't happening
+    // due to the active BrowsingContext switching processes,
+    // in which case the BrowserChild has already marked itself
+    // as destroying.
+    nsPIDOMWindowOuter* outer = mActiveBrowsingContext->GetDOMWindow();
+    if (outer) {
+      nsPIDOMWindowInner* inner = outer->GetCurrentInnerWindow();
+      if (inner) {
+        WindowGlobalChild* globalChild = inner->GetWindowGlobalChild();
+        if (globalChild) {
+          RefPtr<BrowserChild> browserChild = globalChild->GetBrowserChild();
+          if (browserChild && !browserChild->IsDestroyed()) {
+            contentChild->SendUnsetActiveBrowsingContext(
+                mActiveBrowsingContext);
+          }
+        }
+      }
+    }
+  }
   mActiveBrowsingContext = aContext;
+}
+
+void nsFocusManager::SetActiveBrowsingContextFromOtherProcess(
+    BrowsingContext* aContext) {
+  MOZ_ASSERT(!XRE_IsParentProcess());
+  MOZ_ASSERT(aContext);
+  if (aContext->IsInProcess()) {
+    return;
+  }
+  mActiveBrowsingContext = aContext;
+}
+
+void nsFocusManager::UnsetActiveBrowsingContextFromOtherProcess(
+    BrowsingContext* aContext) {
+  MOZ_ASSERT(!XRE_IsParentProcess());
+  MOZ_ASSERT(aContext);
+  if (mActiveBrowsingContext == aContext) {
+    mActiveBrowsingContext = nullptr;
+  }
 }
 
 void nsFocusManager::SetFocusedWindowInternal(nsPIDOMWindowOuter* aWindow) {
