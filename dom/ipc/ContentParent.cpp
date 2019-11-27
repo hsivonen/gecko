@@ -6134,7 +6134,10 @@ mozilla::ipc::IPCResult ContentParent::RecvSetFocusedBrowsingContext(
     return IPC_OK();
   }
 
-  // XXX Set focused BrowserParent
+  nsFocusManager* fm = nsFocusManager::GetFocusManager();
+  if (fm) {
+    fm->SetFocusedBrowsingContextChromeCache(aContext);
+  }
 
   aContext->Group()->EachOtherParent(this, [&](ContentParent* aParent) {
     Unused << aParent->SendSetFocusedBrowsingContext(aContext);
@@ -6152,6 +6155,11 @@ mozilla::ipc::IPCResult ContentParent::RecvSetActiveBrowsingContext(
     return IPC_OK();
   }
 
+  nsFocusManager* fm = nsFocusManager::GetFocusManager();
+  if (fm) {
+    fm->SetActiveBrowsingContextChromeCache(aContext);
+  }
+
   aContext->Group()->EachOtherParent(this, [&](ContentParent* aParent) {
     Unused << aParent->SendSetActiveBrowsingContext(aContext);
   });
@@ -6166,6 +6174,13 @@ mozilla::ipc::IPCResult ContentParent::RecvUnsetActiveBrowsingContext(
         BrowsingContext::GetLog(), LogLevel::Debug,
         ("ParentIPC: Trying to send a message to dead or detached context"));
     return IPC_OK();
+  }
+
+  nsFocusManager* fm = nsFocusManager::GetFocusManager();
+  if (fm) {
+    if (aContext == fm->GetActiveBrowsingContextChromeCache()) {
+      fm->SetActiveBrowsingContextChromeCache(nullptr);
+    }
   }
 
   aContext->Group()->EachOtherParent(this, [&](ContentParent* aParent) {

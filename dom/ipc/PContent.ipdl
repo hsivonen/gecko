@@ -1559,6 +1559,8 @@ child:
     async BlurToChild(BrowsingContext aFocusedBrowsingContext, BrowsingContext aWindowToClear,
                               BrowsingContext aAncestorWindowToFocus,
                               bool aIsLeavingDocument, bool aAdjustWidget);
+    async SetupFocusedAndActive(BrowsingContext aFocusedBrowsingContext,
+                                BrowsingContext aActiveBrowsingContext);
 both:
     async WindowPostMessage(BrowsingContext aContext, ClonedMessageData aMessage,
                             PostMessageData aData);

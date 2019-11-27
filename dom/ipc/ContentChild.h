@@ -760,6 +760,8 @@ class ContentChild final : public PContentChild,
       BrowsingContext* aFocusedBrowsingContext, BrowsingContext* aWindowToClear,
       BrowsingContext* aAncestorWindowToFocus, bool aIsLeavingDocument,
       bool aAdjustWidget);
+  mozilla::ipc::IPCResult RecvSetupFocusedAndActive(
+      BrowsingContext* aFocusedBrowsingContext, BrowsingContext* aActiveBrowsingContext);
   mozilla::ipc::IPCResult RecvWindowPostMessage(
       BrowsingContext* aContext, const ClonedMessageData& aMessage,
       const PostMessageData& aData);

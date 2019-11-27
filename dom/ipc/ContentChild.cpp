@@ -4188,6 +4188,20 @@ mozilla::ipc::IPCResult ContentChild::RecvBlurToChild(
   return IPC_OK();
 }
 
+mozilla::ipc::IPCResult ContentChild::RecvSetupFocusedAndActive(
+      BrowsingContext* aFocusedBrowsingContext, BrowsingContext* aActiveBrowsingContext) {
+  nsFocusManager* fm = nsFocusManager::GetFocusManager();
+  if (fm) {
+    if (aActiveBrowsingContext) {
+      fm->SetActiveBrowsingContextFromOtherProcess(aActiveBrowsingContext);
+    }
+    if (aFocusedBrowsingContext) {
+      fm->SetFocusedBrowsingContextFromOtherProcess(aFocusedBrowsingContext);      
+    }
+  }
+  return IPC_OK();
+}
+
 mozilla::ipc::IPCResult ContentChild::RecvWindowPostMessage(
     BrowsingContext* aContext, const ClonedMessageData& aMessage,
     const PostMessageData& aData) {

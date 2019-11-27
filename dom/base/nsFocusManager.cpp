@@ -157,9 +157,11 @@ NS_IMPL_CYCLE_COLLECTING_ADDREF(nsFocusManager)
 NS_IMPL_CYCLE_COLLECTING_RELEASE(nsFocusManager)
 
 NS_IMPL_CYCLE_COLLECTION(nsFocusManager, mActiveWindow, mActiveBrowsingContext,
-                         mFocusedWindow, mFocusedBrowsingContext,
-                         mFocusedElement, mFirstBlurEvent, mFirstFocusEvent,
-                         mWindowBeingLowered, mDelayedBlurFocusEvents,
+                         mActiveBrowsingContextChromeCache, mFocusedWindow,
+                         mFocusedBrowsingContext,
+                         mFocusedBrowsingContextChromeCache, mFocusedElement,
+                         mFirstBlurEvent, mFirstFocusEvent, mWindowBeingLowered,
+                         mDelayedBlurFocusEvents,
                          mMouseButtonEventHandlingDocument)
 
 nsFocusManager* nsFocusManager::sInstance = nullptr;
@@ -239,8 +241,10 @@ nsFocusManager::Observe(nsISupports* aSubject, const char* aTopic,
   if (!nsCRT::strcmp(aTopic, "xpcom-shutdown")) {
     mActiveWindow = nullptr;
     mActiveBrowsingContext = nullptr;
+    mActiveBrowsingContextChromeCache = nullptr;
     mFocusedWindow = nullptr;
     mFocusedBrowsingContext = nullptr;
+    mFocusedBrowsingContextChromeCache = nullptr;
     mFocusedElement = nullptr;
     mFirstBlurEvent = nullptr;
     mFirstFocusEvent = nullptr;
@@ -4345,6 +4349,15 @@ void nsFocusManager::SetFocusedBrowsingContextFromOtherProcess(
   mFocusedElement = nullptr;
 }
 
+void nsFocusManager::SetFocusedBrowsingContextChromeCache(
+    mozilla::dom::BrowsingContext* aContext) {
+  mFocusedBrowsingContextChromeCache = aContext;
+}
+
+BrowsingContext* nsFocusManager::GetFocusedBrowsingContextChromeCache() {
+  return mFocusedBrowsingContextChromeCache;
+}
+
 void nsFocusManager::SetActiveBrowsingContext(
     mozilla::dom::BrowsingContext* aContext) {
   MOZ_ASSERT(!XRE_IsParentProcess());
@@ -4394,6 +4407,15 @@ void nsFocusManager::UnsetActiveBrowsingContextFromOtherProcess(
   if (mActiveBrowsingContext == aContext) {
     mActiveBrowsingContext = nullptr;
   }
+}
+
+void nsFocusManager::SetActiveBrowsingContextChromeCache(
+    mozilla::dom::BrowsingContext* aContext) {
+  mActiveBrowsingContextChromeCache = aContext;
+}
+
+BrowsingContext* nsFocusManager::GetActiveBrowsingContextChromeCache() {
+  return mActiveBrowsingContextChromeCache;
 }
 
 void nsFocusManager::SetFocusedWindowInternal(nsPIDOMWindowOuter* aWindow) {

@@ -7,6 +7,7 @@
 #include "mozilla/dom/BrowsingContextGroup.h"
 #include "mozilla/dom/BrowsingContextBinding.h"
 #include "mozilla/dom/BindingUtils.h"
+#include "nsFocusManager.h"
 
 namespace mozilla {
 namespace dom {
@@ -63,6 +64,16 @@ void BrowsingContextGroup::EnsureSubscribed(ContentParent* aProcess) {
 
   Subscribe(aProcess);
 
+  bool sendFocused = false;
+  bool sendActive = false;
+  BrowsingContext* focused = nullptr;
+  BrowsingContext* active = nullptr;
+  nsFocusManager* fm = nsFocusManager::GetFocusManager();
+  if (fm) {
+    focused = fm->GetFocusedBrowsingContextChromeCache();
+    active = fm->GetActiveBrowsingContextChromeCache();
+  }
+
   nsTArray<BrowsingContext::IPCInitializer> inits(mContexts.Count());
 
   // First, perform a pre-order walk of our BrowsingContext objects from our
@@ -72,6 +83,12 @@ void BrowsingContextGroup::EnsureSubscribed(ContentParent* aProcess) {
                           "cached contexts must have a parent");
 
     context->PreOrderWalk([&](BrowsingContext* aContext) {
+      if (focused == aContext) {
+        sendFocused = true;
+      }
+      if (active == aContext) {
+        sendActive = true;
+      }
       inits.AppendElement(aContext->GetIPCInitializer());
     });
   }
@@ -80,6 +97,12 @@ void BrowsingContextGroup::EnsureSubscribed(ContentParent* aProcess) {
   // them after mToplevels.
   for (auto iter = mCachedContexts.Iter(); !iter.Done(); iter.Next()) {
     iter.Get()->GetKey()->PreOrderWalk([&](BrowsingContext* aContext) {
+      if (focused == aContext) {
+        sendFocused = true;
+      }
+      if (active == aContext) {
+        sendActive = true;
+      }
       inits.AppendElement(aContext->GetIPCInitializer());
     });
   }
@@ -90,6 +113,11 @@ void BrowsingContextGroup::EnsureSubscribed(ContentParent* aProcess) {
 
   // Send all of our contexts to the target content process.
   Unused << aProcess->SendRegisterBrowsingContextGroup(inits);
+
+  if (sendActive || sendFocused) {
+    Unused << aProcess->SendSetupFocusedAndActive(
+        sendFocused ? focused : nullptr, sendActive ? active : nullptr);
+  }
 }
 
 bool BrowsingContextGroup::IsContextCached(BrowsingContext* aContext) const {
