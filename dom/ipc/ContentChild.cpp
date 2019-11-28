@@ -4151,9 +4151,15 @@ mozilla::ipc::IPCResult ContentChild::RecvSetFocusedElement(
     return IPC_OK();
   }
 
-  nsCOMPtr<nsPIDOMWindowOuter> windowToFalse = aSetToFalse->GetDOMWindow();
-  nsCOMPtr<nsPIDOMWindowOuter> windowToTrue = aSetToTrue->GetDOMWindow();
-  if (!windowToFalse && windowToTrue) {
+  nsCOMPtr<nsPIDOMWindowOuter> windowToFalse;
+  nsCOMPtr<nsPIDOMWindowOuter> windowToTrue;
+  if (aSetToFalse) {
+    windowToFalse = aSetToFalse->GetDOMWindow();
+  }
+  if (aSetToTrue) {
+    windowToTrue = aSetToTrue->GetDOMWindow();
+  }
+  if (!windowToFalse && !windowToTrue) {
     MOZ_LOG(
         BrowsingContext::GetLog(), LogLevel::Debug,
         ("ChildIPC: Trying to send a message to a context without a window"));
