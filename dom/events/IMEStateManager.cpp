@@ -133,7 +133,10 @@ void IMEStateManager::OnFocusMovedBetweenBrowsers(BrowserParent* aBlur,
     }
   }
 
-  if (aBlur) {
+  // The manager check is to avoid telling the content process to stop
+  // IME state management after focus has already moved there between
+  // two same-process-hosted out-of-process iframes.
+  if (aBlur && (!aFocus || (aBlur->Manager() != aFocus->Manager()))) {
     MOZ_LOG(sISMLog, LogLevel::Debug,
             ("  OnFocusMovedBetweenBrowsers(), notifying previous "
              "focused child process of parent process or another child process "
