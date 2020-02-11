@@ -2011,6 +2011,43 @@ bool nsFocusManager::BlurImpl(BrowsingContext* aBrowsingContextToClear,
     // if the object being blurred is a remote browser, deactivate remote
     // content
     if (BrowserParent* remote = BrowserParent::GetFrom(element)) {
+      MOZ_ASSERT(XRE_IsParentProcess());
+      // We need to deactivate all out-of-process iframes under this top-level
+      // Web content. However, in order to have the focused iframe chain
+      // deactivate without racing, we filter it out from the broadcast.
+      AutoTArray<BrowsingContext*, 30> focusChain;
+      BrowsingContext* topLevelBrowsingContext = remote->GetBrowsingContext();
+      MOZ_ASSERT(topLevelBrowsingContext);
+      BrowsingContext* focusedBrowsingContext =
+          GetFocusedBrowsingContextInChrome();
+      // if (focusedBrowsingContext &&
+      //     focusedBrowsingContext->Top() == topLevelBrowsingContext) {
+      //   while (focusedBrowsingContext) {
+      //     focusChain.AppendElement(focusedBrowsingContext);
+      //     focusedBrowsingContext = focusedBrowsingContext->GetParent();
+      //   }
+      // } else {
+        // Focus is somehow elsewhere.
+        focusChain.AppendElement(topLevelBrowsingContext);
+      // }
+      MOZ_ASSERT(focusChain.SafeLastElement(nullptr) ==
+                 topLevelBrowsingContext);
+
+      topLevelBrowsingContext->PreOrderWalk([&](BrowsingContext* aContext) {
+        if (!focusChain.Contains(aContext)) {
+          WindowGlobalParent* windowGlobalParent =
+              aContext->Canonical()->GetCurrentWindowGlobal();
+          if (windowGlobalParent) {
+            RefPtr<BrowserParent> browserParent =
+                windowGlobalParent->GetBrowserParent();
+            if (browserParent) {
+              browserParent->Deactivate(windowBeingLowered);
+            }
+          }
+        }
+      });
+
+      // Now deactivate the focused chain without racing within that chain.
       remote->Deactivate(windowBeingLowered);
       LOGFOCUS(
           ("Remote browser deactivated %p, %d", remote, windowBeingLowered));
