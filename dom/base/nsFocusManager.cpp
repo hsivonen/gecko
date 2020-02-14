@@ -1198,13 +1198,14 @@ void nsFocusManager::ActivateOrDeactivate(nsPIDOMWindowOuter* aWindow,
         CanBubble::eYes, Cancelable::eYes, nullptr);
   }
 
-  // Look for any remote child frames, iterate over them and send the activation
-  // notification.
-  nsContentUtils::CallOnAllRemoteChildren(
-      aWindow, [&aActive](BrowserParent* aBrowserParent) -> CallState {
-        Unused << aBrowserParent->SendParentActivated(aActive);
-        return CallState::Continue;
-      });
+  if (XRE_IsParentProcess()) {
+    // Look for any remote child frames, iterate over them and send the
+    // activation notification.
+    nsContentUtils::CallOnAllRemoteDescendants(
+        aWindow, [&aActive](BrowserParent* aBrowserParent) {
+          Unused << aBrowserParent->SendParentActivated(aActive);
+        });
+  }
 }
 
 // Retrieves innerWindowId of the window of the last focused element to

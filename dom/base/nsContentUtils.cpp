@@ -49,6 +49,7 @@
 #include "mozilla/dom/BlobURLProtocolHandler.h"
 #include "mozilla/dom/BrowsingContext.h"
 #include "mozilla/dom/BrowsingContextGroup.h"
+#include "mozilla/dom/CanonicalBrowsingContext.h"
 #include "mozilla/dom/ContentParent.h"
 #include "mozilla/dom/ContentChild.h"
 #include "mozilla/dom/CustomElementRegistry.h"
@@ -84,6 +85,7 @@
 #include "mozilla/dom/ShadowRoot.h"
 #include "mozilla/dom/XULCommandEvent.h"
 #include "mozilla/dom/UserActivation.h"
+#include "mozilla/dom/WindowGlobalParent.h"
 #include "mozilla/dom/WorkerCommon.h"
 #include "mozilla/dom/WorkerPrivate.h"
 #include "mozilla/extensions/WebExtensionPolicy.h"
@@ -7233,6 +7235,57 @@ void nsContentUtils::CallOnAllRemoteChildren(
     RefPtr<MessageBroadcaster> windowMM = window->GetMessageManager();
     if (windowMM) {
       CallOnAllRemoteChildren(windowMM, aCallback);
+    }
+  }
+}
+
+void nsContentUtils::CallOnAllRemoteDescendants(
+    MessageBroadcaster* aManager,
+    const std::function<void(BrowserParent*)>& aCallback) {
+  uint32_t browserChildCount = aManager->ChildCount();
+  for (uint32_t j = 0; j < browserChildCount; ++j) {
+    RefPtr<MessageListenerManager> childMM = aManager->GetChildAt(j);
+    if (!childMM) {
+      continue;
+    }
+
+    RefPtr<MessageBroadcaster> nonLeafMM = MessageBroadcaster::From(childMM);
+    if (nonLeafMM) {
+      CallOnAllRemoteDescendants(nonLeafMM, aCallback);
+      continue;
+    }
+
+    mozilla::dom::ipc::MessageManagerCallback* cb = childMM->GetCallback();
+    if (cb) {
+      nsFrameLoader* fl = static_cast<nsFrameLoader*>(cb);
+      BrowserParent* remote = BrowserParent::GetFrom(fl);
+      if (remote && aCallback) {
+        CanonicalBrowsingContext* cbc = remote->GetBrowsingContext();
+        if (cbc) {
+          cbc->PreOrderWalk([&](BrowsingContext* aContext) {
+            WindowGlobalParent* wgp =
+                aContext->Canonical()->GetCurrentWindowGlobal();
+            if (wgp) {
+              RefPtr<BrowserParent> bp = wgp->GetBrowserParent();
+              if (bp) {
+                aCallback(bp);
+              }
+            }
+          });
+        }
+      }
+    }
+  }
+}
+
+void nsContentUtils::CallOnAllRemoteDescendants(
+    nsPIDOMWindowOuter* aWindow,
+    const std::function<void(BrowserParent*)>& aCallback) {
+  nsGlobalWindowOuter* window = nsGlobalWindowOuter::Cast(aWindow);
+  if (window->IsChromeWindow()) {
+    RefPtr<MessageBroadcaster> windowMM = window->GetMessageManager();
+    if (windowMM) {
+      CallOnAllRemoteDescendants(windowMM, aCallback);
     }
   }
 }

@@ -2815,6 +2815,15 @@ class nsContentUtils {
           aCallback);
 
   /*
+   * Call the given callback on all remote descendants of the given top-level
+   * window. Return Callstate::Stop from the callback to stop calling further
+   * children.
+   */
+  static void CallOnAllRemoteDescendants(
+      nsPIDOMWindowOuter* aWindow,
+      const std::function<void(mozilla::dom::BrowserParent*)>& aCallback);
+
+  /*
    * Call nsPIDOMWindow::SetKeyboardIndicators all all remote children. This is
    * in here rather than nsGlobalWindow because BrowserParent indirectly
    * includes Windows headers which aren't allowed there.
@@ -3285,6 +3294,10 @@ class nsContentUtils {
       mozilla::dom::MessageBroadcaster* aManager,
       const std::function<mozilla::CallState(mozilla::dom::BrowserParent*)>&
           aCallback);
+
+  static void CallOnAllRemoteDescendants(
+      mozilla::dom::MessageBroadcaster* aManager,
+      const std::function<void(mozilla::dom::BrowserParent*)>& aCallback);
 
   static nsINode* GetCommonAncestorHelper(nsINode* aNode1, nsINode* aNode2);
   static nsIContent* GetCommonFlattenedTreeAncestorHelper(
