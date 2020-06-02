@@ -18,7 +18,6 @@ extern crate bookmark_sync;
 extern crate cascade_bloom_filter;
 #[cfg(feature = "new_cert_storage")]
 extern crate cert_storage;
-extern crate chardetng_c;
 extern crate cosec;
 #[cfg(feature = "cubeb_coreaudio_rust")]
 extern crate cubeb_coreaudio;
@@ -42,7 +41,6 @@ extern crate prefs_parser;
 #[cfg(feature = "gecko_profiler")]
 extern crate profiler_helper;
 extern crate rsdparsa_capi;
-extern crate shift_or_euc_c;
 extern crate static_prefs;
 extern crate storage;
 #[cfg(feature = "quantum_render")]

@@ -177,8 +177,6 @@ nsHtml5StreamParser::nsHtml5StreamParser(nsHtml5TreeOpExecutor* aExecutor,
       mEventTarget(nsHtml5Module::GetStreamParserThread()->SerialEventTarget()),
       mExecutorFlusher(new nsHtml5ExecutorFlusher(aExecutor)),
       mLoadFlusher(new nsHtml5LoadFlusher(aExecutor)),
-      mJapaneseDetector(mozilla::JapaneseDetector::Create(
-          StaticPrefs::intl_charset_detector_iso2022jp_allowed())),
       mUseJapaneseDetector(false),
       mInitialEncodingWasFromParentFrame(false),
       mHasHadErrors(false),
@@ -239,7 +237,7 @@ void nsHtml5StreamParser::GuessEncoding(bool aEof, bool aInitial) {
   if (!aInitial) {
     mGuessEncoding = false;
   }
-  auto encoding = mDetector->Guess(mTLD, mDecodingLocalFileWithoutTokenizing);
+  auto encoding = WINDOWS_1252_ENCODING; // mDetector->Guess(mTLD, mDecodingLocalFileWithoutTokenizing);
   if (HasDecoder() && !mDecodingLocalFileWithoutTokenizing) {
     if (mEncoding == encoding) {
       auto source = aInitial ? kCharsetFromInitialAutoDetection
@@ -269,7 +267,7 @@ void nsHtml5StreamParser::GuessEncoding(bool aEof, bool aInitial) {
 void nsHtml5StreamParser::FeedJapaneseDetector(Span<const uint8_t> aBuffer,
                                                bool aLast) {
   MOZ_ASSERT(!mDecodingLocalFileWithoutTokenizing);
-  const Encoding* detected = mJapaneseDetector->Feed(aBuffer, aLast);
+  const Encoding* detected = SHIFT_JIS_ENCODING;// mJapaneseDetector->Feed(aBuffer, aLast);
   if (!detected) {
     return;
   }
@@ -300,11 +298,11 @@ void nsHtml5StreamParser::FeedJapaneseDetector(Span<const uint8_t> aBuffer,
 
 void nsHtml5StreamParser::FeedDetector(Span<const uint8_t> aBuffer,
                                        bool aLast) {
-  if (mUseJapaneseDetector) {
-    FeedJapaneseDetector(aBuffer, aLast);
-  } else {
-    Unused << mDetector->Feed(aBuffer, aLast);
-  }
+  // if (mUseJapaneseDetector) {
+  //   FeedJapaneseDetector(aBuffer, aLast);
+  // } else {
+  //   Unused << mDetector->Feed(aBuffer, aLast);
+  // }
 }
 
 void nsHtml5StreamParser::SetViewSourceTitle(nsIURI* aURL) {
@@ -978,7 +976,7 @@ nsresult nsHtml5StreamParser::OnStartRequest(nsIRequest* aRequest) {
   // intent to use it.
   auto detectorCreator = MakeScopeExit([&] {
     if (mFeedChardet && !mUseJapaneseDetector) {
-      mDetector = mozilla::EncodingDetector::Create();
+      // mDetector = mozilla::EncodingDetector::Create();
     }
   });
 

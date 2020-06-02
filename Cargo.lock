@@ -561,26 +561,6 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "4785bdd1c96b2a846b2bd7cc02e86b6b3dbf14e7e53446c4f54c92a361040822"
 
 [[package]]
-name = "chardetng"
-version = "0.1.9"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "7817bfb797fd08f0b1cf095378254b28cb0b5000412ca32b490c9d9e225ffc38"
-dependencies = [
- "encoding_rs",
- "memchr",
-]
-
-[[package]]
-name = "chardetng_c"
-version = "0.1.1"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "0458f9fd705d9040356a137c5872a0f9ce1d27222d69de6aeeecf00e5e520076"
-dependencies = [
- "chardetng",
- "encoding_rs",
-]
-
-[[package]]
 name = "chrono"
 version = "0.4.10"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -1898,7 +1878,6 @@ dependencies = [
  "bookmark_sync",
  "cascade_bloom_filter",
  "cert_storage",
- "chardetng_c",
  "cose-c",
  "cubeb-coreaudio",
  "cubeb-pulse",
@@ -1932,7 +1911,6 @@ dependencies = [
  "rsdparsa_capi",
  "rusqlite",
  "rustc_version",
- "shift_or_euc_c",
  "static_prefs",
  "storage",
  "unic-langid",
@@ -4354,26 +4332,6 @@ dependencies = [
  "digest",
  "fake-simd",
  "opaque-debug",
-]
-
-[[package]]
-name = "shift_or_euc"
-version = "0.1.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "f930dea4685b9803954b9d74cdc175c6d946a22f2eafe5aa2e9a58cdcae7da8c"
-dependencies = [
- "encoding_rs",
- "memchr",
-]
-
-[[package]]
-name = "shift_or_euc_c"
-version = "0.1.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "c81ec08c8a68c45c48d8ef58b80ce038cc9945891c4a4996761e2ec5cba05abc"
-dependencies = [
- "encoding_rs",
- "shift_or_euc",
 ]
 
 [[package]]

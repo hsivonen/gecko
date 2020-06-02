@@ -9,8 +9,6 @@
 #include "nsCOMPtr.h"
 #include "nsHtml5MetaScanner.h"
 #include "mozilla/Encoding.h"
-#include "mozilla/EncodingDetector.h"
-#include "mozilla/JapaneseDetector.h"
 #include "mozilla/UniquePtr.h"
 #include "nsHtml5TreeOpExecutor.h"
 #include "nsHtml5OwningUTF16Buffer.h"
@@ -564,16 +562,6 @@ class nsHtml5StreamParser final : public nsISupports {
   nsCOMPtr<nsIRunnable> mExecutorFlusher;
 
   nsCOMPtr<nsIRunnable> mLoadFlusher;
-
-  /**
-   * The Japanese detector.
-   */
-  mozilla::UniquePtr<mozilla::JapaneseDetector> mJapaneseDetector;
-
-  /**
-   * The generict detector.
-   */
-  mozilla::UniquePtr<mozilla::EncodingDetector> mDetector;
 
   /**
    * The TLD we're loading from or empty if unknown.
