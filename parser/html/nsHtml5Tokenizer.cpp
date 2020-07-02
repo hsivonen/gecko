@@ -1708,7 +1708,8 @@ stateloop:
           case '\f':
           case '<':
           case '&':
-          case '\0': {
+          case '\0':
+          case ';': {
             emitOrAppendCharRefBuf(returnState);
             if (!(returnState & DATA_AND_RCDATA_MASK)) {
               cstart = pos;
@@ -1738,16 +1739,14 @@ stateloop:
             } else if (c >= 'A' && c <= 'Z') {
               firstCharKey = c - 'A';
             } else {
-              if (P::reportErrors) {
-                errNoNamedCharacterMatch();
-              }
               emitOrAppendCharRefBuf(returnState);
               if (!(returnState & DATA_AND_RCDATA_MASK)) {
                 cstart = pos;
               }
               reconsume = true;
-              state =
-                  P::transition(mViewSource.get(), returnState, reconsume, pos);
+              state = P::transition(mViewSource.get(),
+                                    nsHtml5Tokenizer::AMBIGUOUS_AMPERSAND,
+                                    reconsume, pos);
               NS_HTML5_CONTINUE(stateloop);
             }
             appendCharRefBuf(c);
@@ -1773,16 +1772,14 @@ stateloop:
             }
           }
           if (!hilo) {
-            if (P::reportErrors) {
-              errNoNamedCharacterMatch();
-            }
             emitOrAppendCharRefBuf(returnState);
             if (!(returnState & DATA_AND_RCDATA_MASK)) {
               cstart = pos;
             }
             reconsume = true;
-            state =
-                P::transition(mViewSource.get(), returnState, reconsume, pos);
+            state = P::transition(mViewSource.get(),
+                                  nsHtml5Tokenizer::AMBIGUOUS_AMPERSAND,
+                                  reconsume, pos);
             NS_HTML5_CONTINUE(stateloop);
           }
           appendCharRefBuf(c);
@@ -1852,15 +1849,14 @@ stateloop:
         }
       outer_end:;
         if (candidate == -1) {
-          if (P::reportErrors) {
-            errNoNamedCharacterMatch();
-          }
           emitOrAppendCharRefBuf(returnState);
           if (!(returnState & DATA_AND_RCDATA_MASK)) {
             cstart = pos;
           }
           reconsume = true;
-          state = P::transition(mViewSource.get(), returnState, reconsume, pos);
+          state = P::transition(mViewSource.get(),
+                                nsHtml5Tokenizer::AMBIGUOUS_AMPERSAND,
+                                reconsume, pos);
           NS_HTML5_CONTINUE(stateloop);
         } else {
           const nsHtml5CharacterName& candidateName =
@@ -1876,13 +1872,11 @@ stateloop:
               }
               if (ch == '=' || (ch >= '0' && ch <= '9') ||
                   (ch >= 'A' && ch <= 'Z') || (ch >= 'a' && ch <= 'z')) {
-                if (P::reportErrors) {
-                  errNoNamedCharacterMatch();
-                }
                 appendCharRefBufToStrBuf();
                 reconsume = true;
-                state = P::transition(mViewSource.get(), returnState, reconsume,
-                                      pos);
+                state = P::transition(mViewSource.get(),
+                                      nsHtml5Tokenizer::AMBIGUOUS_AMPERSAND,
+                                      reconsume, pos);
                 NS_HTML5_CONTINUE(stateloop);
               }
             }
@@ -1918,6 +1912,29 @@ stateloop:
             cstart = earlyBreak ? pos + 1 : pos;
           }
           reconsume = !earlyBreak;
+          state = P::transition(mViewSource.get(), returnState, reconsume, pos);
+          NS_HTML5_CONTINUE(stateloop);
+        }
+      }
+      case AMBIGUOUS_AMPERSAND: {
+        for (;;) {
+          if (reconsume) {
+            if (++pos == endPos) {
+              NS_HTML5_BREAK(stateloop);
+            }
+            pos--;
+            c = checkChar(buf, pos);
+          }
+          if (c == ';') {
+            if (P::reportErrors) {
+              errNoNamedCharacterMatch();
+            }
+          } else if ((c >= '0' && c <= '9') || (c >= 'A' && c <= 'Z') ||
+                     (c >= 'a' && c <= 'z')) {
+            appendStrBuf(c);
+            pos++;
+            continue;
+          }
           state = P::transition(mViewSource.get(), returnState, reconsume, pos);
           NS_HTML5_CONTINUE(stateloop);
         }
@@ -4351,7 +4368,6 @@ eofloop:
         continue;
       }
       case CHARACTER_REFERENCE_HILO_LOOKUP: {
-        errNoNamedCharacterMatch();
         emitOrAppendCharRefBuf(returnState);
         state = returnState;
         continue;
@@ -4400,7 +4416,6 @@ eofloop:
         }
       outer_end:;
         if (candidate == -1) {
-          errNoNamedCharacterMatch();
           emitOrAppendCharRefBuf(returnState);
           state = returnState;
           NS_HTML5_CONTINUE(eofloop);
@@ -4418,7 +4433,6 @@ eofloop:
               }
               if ((ch >= '0' && ch <= '9') || (ch >= 'A' && ch <= 'Z') ||
                   (ch >= 'a' && ch <= 'z')) {
-                errNoNamedCharacterMatch();
                 appendCharRefBufToStrBuf();
                 state = returnState;
                 NS_HTML5_CONTINUE(eofloop);

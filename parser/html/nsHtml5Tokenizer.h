@@ -212,6 +212,8 @@ class nsHtml5Tokenizer {
 
   static const int32_t PROCESSING_INSTRUCTION_QUESTION_MARK = 74;
 
+  static const int32_t AMBIGUOUS_AMPERSAND = 75;
+
  private:
   static const int32_t LEAD_OFFSET = (0xD800 - (0x10000 >> 10));
 
