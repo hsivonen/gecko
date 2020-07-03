@@ -1931,7 +1931,11 @@ stateloop:
             }
           } else if ((c >= '0' && c <= '9') || (c >= 'A' && c <= 'Z') ||
                      (c >= 'a' && c <= 'z')) {
-            appendStrBuf(c);
+            if (returnState == ATTRIBUTE_VALUE_DOUBLE_QUOTED ||
+                returnState == ATTRIBUTE_VALUE_SINGLE_QUOTED ||
+                returnState == ATTRIBUTE_VALUE_UNQUOTED) {
+              appendStrBuf(c);
+            }
             pos++;
             continue;
           }
