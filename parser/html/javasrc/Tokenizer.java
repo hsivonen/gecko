@@ -2905,8 +2905,7 @@ public class Tokenizer implements Locator {
                                 continue stateloop;
                             case '<':
                                 appendStrBuf(c);
-                                state = transition(state, Tokenizer.COMMENT_LESSTHAN, reconsume, pos);
-                                continue stateloop;
+                                continue;
                             case '-':
                                 appendStrBuf(c);
                                 state = transition(state, Tokenizer.COMMENT_END_DASH, reconsume, pos);
@@ -2919,13 +2918,14 @@ public class Tokenizer implements Locator {
                                 continue;
                             case '\u0000':
                                 c = '\uFFFD';
-                                // fall thru
+                                // CPPONLY: MOZ_FALLTHROUGH;
                             default:
                                 appendStrBuf(c);
                                 state = transition(state, Tokenizer.COMMENT, reconsume, pos);
                                 continue stateloop;
                         }
                     }
+                    // CPPONLY: MOZ_FALLTHROUGH;
                 case COMMENT_LESSTHAN_BANG:
                     for (;;) {
                         if (++pos == endPos) {
@@ -2949,13 +2949,14 @@ public class Tokenizer implements Locator {
                                 continue;
                             case '\u0000':
                                 c = '\uFFFD';
-                                // fall thru
+                                // CPPONLY: MOZ_FALLTHROUGH;
                             default:
                                 appendStrBuf(c);
                                 state = transition(state, Tokenizer.COMMENT, reconsume, pos);
                                 continue stateloop;
                         }
                     }
+                    // CPPONLY: MOZ_FALLTHROUGH;
                 case COMMENT_LESSTHAN_BANG_DASH:
                     for (;;) {
                         if (++pos == endPos) {
@@ -2979,13 +2980,14 @@ public class Tokenizer implements Locator {
                                 continue;
                             case '\u0000':
                                 c = '\uFFFD';
-                                // fall thru
+                                // CPPONLY: MOZ_FALLTHROUGH;
                             default:
                                 appendStrBuf(c);
                                 state = transition(state, Tokenizer.COMMENT, reconsume, pos);
                                 continue stateloop;
                         }
                     }
+                    // CPPONLY: MOZ_FALLTHROUGH;
                 case COMMENT_LESSTHAN_BANG_DASH_DASH:
                     for (;;) {
                         if (++pos == endPos) {
@@ -3018,7 +3020,7 @@ public class Tokenizer implements Locator {
                                 continue;
                             case '\u0000':
                                 c = '\uFFFD';
-                                // fall thru
+                                // CPPONLY: MOZ_FALLTHROUGH;
                             case '!':
                                 errNestedComment();
                                 adjustDoubleHyphenAndAppendToStrBufAndErr(c, reportedConsecutiveHyphens);
@@ -3033,6 +3035,7 @@ public class Tokenizer implements Locator {
                                 continue stateloop;
                         }
                     }
+                    // CPPONLY: MOZ_FALLTHROUGH;
                     // XXX reorder point
                 case COMMENT_START_DASH:
                     if (++pos == endPos) {
