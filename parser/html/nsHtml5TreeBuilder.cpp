@@ -1651,7 +1651,7 @@ starttagloop:
             NS_HTML5_BREAK(starttagloop);
           }
           default: {
-            errBadStartTagInHead(name);
+            errBadStartTagInNoscriptInHead(name);
             pop();
             mode = IN_HEAD;
             continue;
