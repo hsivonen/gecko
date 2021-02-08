@@ -349,27 +349,36 @@ TestRunner._toggle = function(el) {
  * Creates the iframe that contains a test
  **/
 TestRunner._makeIframe = function(url, retry) {
+  dump("TESTINPUTMODE _makeIframe " + url + " document.hasFocus(): " + document.hasFocus() + " document.activeElement == iframe: " + (document.activeElement == iframe) + "\n");
   var iframe = $("testframe");
   if (
     url != "about:blank" &&
     (("hasFocus" in document && !document.hasFocus()) ||
       ("activeElement" in document && document.activeElement != iframe))
   ) {
+    dump("TESTINPUTMODE TestRunner.js will call contentAsyncEvent(\"Focus\");\n");
     contentAsyncEvent("Focus");
+    dump("TESTINPUTMODE TestRunner.js will call window.focus();\n");
     window.focus();
+    dump("TESTINPUTMODE TestRunner.js will call SpecialPowers.focus();\n");
     SpecialPowers.focus();
+    dump("TESTINPUTMODE TestRunner.js will call iframe.focus();\n");
     iframe.focus();
     if (retry < 3) {
+      dump("TESTINPUTMODE will retry\n");
       window.setTimeout(function() {
         TestRunner._makeIframe(url, retry + 1);
       }, 1000);
       return;
     }
 
+    dump("TESTINPUTMODE FAIL\n");
     TestRunner.structuredLogger.info(
       "Error: Unable to restore focus, expect failures and timeouts."
     );
   }
+  dump("TESTINPUTMODE _makeIframe scrollTo\n");
+
   window.scrollTo(0, $("indicator").offsetTop);
   try {
     let urlObj = new URL(url);
@@ -387,6 +396,7 @@ TestRunner._makeIframe = function(url, retry) {
       urlObj.searchParams.append("expected", TestRunner.expected);
       iframe.src = urlObj.href;
     } else {
+      dump("TESTINPUTMODE _makeIframe set iframe url: " + url + "\n");
       iframe.src = url;
     }
   } catch {

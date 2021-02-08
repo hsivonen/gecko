@@ -970,6 +970,7 @@ SimpleTest.promiseFocus = function(targetWindow, expectBlankPage) {
  *        true if targetWindow.location is 'about:blank'. Defaults to false
  */
 SimpleTest.waitForFocus = function(callback, targetWindow, expectBlankPage) {
+  dump("TESTINPUTMODE SimpleTest.waitForFocus\n");
   // A separate method is used that is serialized and passed to the child
   // process via loadFrameScript. Once the child window is focused, the
   // child will send the WaitForFocus:ChildFocused notification to the parent.
@@ -978,6 +979,7 @@ SimpleTest.waitForFocus = function(callback, targetWindow, expectBlankPage) {
   // child. This message is used so that the child frame can be passed to it.
   /* eslint-disable mozilla/use-services */
   function waitForFocusInner(targetWin, isChildProcess, expectBlank) {
+  dump("TESTINPUTMODE waitForFocusInner\n");
     /* Indicates whether the desired targetWindow has loaded or focused. The
          finished flag is set when the callback has been called and is used to
          reject extraneous events from invoking the callback again. */
@@ -1008,6 +1010,7 @@ SimpleTest.waitForFocus = function(callback, targetWindow, expectBlankPage) {
     /* Event listener for the load or focus events. It will also be called with
          event equal to null to check if the page is already focused and loaded. */
     function focusedOrLoaded(event) {
+  dump("TESTINPUTMODE focusedOrLoaded\n");
       try {
         if (event) {
           if (event.type == "load") {
@@ -1055,6 +1058,7 @@ SimpleTest.waitForFocus = function(callback, targetWindow, expectBlankPage) {
     }
 
     function waitForLoadAndFocusOnWindow(desiredWindow) {
+  dump("TESTINPUTMODE waitForLoadAndFocusOnWindow\n");
       /* If the current document is about:blank and we are not expecting a blank
              page (or vice versa), and the document has not yet loaded, wait for the
              page to load. A common situation is to wait for a newly opened window

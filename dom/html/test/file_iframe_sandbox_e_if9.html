@@ -9,7 +9,9 @@
 <script>
   function doTest() {
     var testContext = location.search == "" ? "?Test 22: Navigate _top with window.open():%20" : location.search;
+    dump("NAVIGATION2 WILL ASSIGN SRC\n");
     document.getElementById("if_11").src = "file_iframe_sandbox_e_if11.html" + testContext;
+    dump("NAVIGATION2 DID ASSIGN SRC\n");
   }
 </script>
 

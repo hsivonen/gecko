@@ -152,14 +152,16 @@ function doTest() {
   // passes if good, fails if bad
   // 22) iframe with sandbox='allow-top-navigation allow-scripts' can navigate top with window.open().
   // file_iframe_sandbox_e_if9.html contains file_iframe_sandbox_e_if11.html which navigates top.
+  dump("NAVIGATION2 WILL OPEN\n");
   window.open("file_iframe_sandbox_e_if9.html");
+  dump("NAVIGATION2 DID OPEN\n");
 
   // passes if good, fails if bad
   // 23) iframe with sandbox='allow-top-navigation allow-scripts' nested inside an iframe with
   // 'allow-top-navigation allow-scripts' can navigate top, with window.open().
   // file_iframe_sandbox_e_if10.html contains file_iframe_sandbox_e_if9.html which contains
   // file_iframe_sandbox_e_if11.html which navigates top.
-  window.open("file_iframe_sandbox_e_if10.html");
+  windowsToClose.push(window.open("file_iframe_sandbox_e_if10.html"));
 
   // passes if good, fails if bad
   // 24) iframe with sandbox='allow-scripts' can NOT navigate top with window.open().

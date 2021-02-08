@@ -654,23 +654,24 @@ void nsFocusManager::WindowRaised(mozIDOMWindowProxy* aWindow,
   nsCOMPtr<nsPIDOMWindowOuter> window = nsPIDOMWindowOuter::From(aWindow);
   BrowsingContext* bc = window->GetBrowsingContext();
 
-  if (MOZ_LOG_TEST(gFocusLog, LogLevel::Debug)) {
-    LOGFOCUS(("Window %p Raised [Currently: %p %p]", aWindow,
-              mActiveWindow.get(), mFocusedWindow.get()));
+
+
+    fprintf(stderr, "TESTINPUTMODE Window %p Raised [Currently: %p %p]\n", aWindow,
+              mActiveWindow.get(), mFocusedWindow.get());
     Document* doc = window->GetExtantDoc();
     if (doc && doc->GetDocumentURI()) {
-      LOGFOCUS(("  Raised Window: %p %s", aWindow,
-                doc->GetDocumentURI()->GetSpecOrDefault().get()));
+      fprintf(stderr, "TESTINPUTMODE   Raised Window: %p %s\n", aWindow,
+                doc->GetDocumentURI()->GetSpecOrDefault().get());
     }
     if (mActiveWindow) {
       doc = mActiveWindow->GetExtantDoc();
       if (doc && doc->GetDocumentURI()) {
-        LOGFOCUS(("  Active Window: %p %s", mActiveWindow.get(),
-                  doc->GetDocumentURI()->GetSpecOrDefault().get()));
+        fprintf(stderr, "TESTINPUTMODE   Active Window: %p %s\n", mActiveWindow.get(),
+                  doc->GetDocumentURI()->GetSpecOrDefault().get());
       }
     }
-  }
 
+    fflush(stderr);
   if (XRE_IsParentProcess()) {
     if (mActiveWindow == window) {
       // The window is already active, so there is no need to focus anything,
@@ -770,22 +771,21 @@ void nsFocusManager::WindowLowered(mozIDOMWindowProxy* aWindow,
 
   nsCOMPtr<nsPIDOMWindowOuter> window = nsPIDOMWindowOuter::From(aWindow);
 
-  if (MOZ_LOG_TEST(gFocusLog, LogLevel::Debug)) {
-    LOGFOCUS(("Window %p Lowered [Currently: %p %p]", aWindow,
-              mActiveWindow.get(), mFocusedWindow.get()));
+    fprintf(stderr, "TESTINPUTMODE Window %p Lowered [Currently: %p %p]\n", aWindow,
+              mActiveWindow.get(), mFocusedWindow.get());
     Document* doc = window->GetExtantDoc();
     if (doc && doc->GetDocumentURI()) {
-      LOGFOCUS(("  Lowered Window: %s",
-                doc->GetDocumentURI()->GetSpecOrDefault().get()));
+      fprintf(stderr, "TESTINPUTMODE  Lowered Window: %s\n",
+                doc->GetDocumentURI()->GetSpecOrDefault().get());
     }
     if (mActiveWindow) {
       doc = mActiveWindow->GetExtantDoc();
       if (doc && doc->GetDocumentURI()) {
-        LOGFOCUS(("  Active Window: %s",
-                  doc->GetDocumentURI()->GetSpecOrDefault().get()));
+        fprintf(stderr, "TESTINPUTMODE  Active Window: %s\n",
+                  doc->GetDocumentURI()->GetSpecOrDefault().get());
       }
     }
-  }
+    fflush(stderr);
 
   if (XRE_IsParentProcess()) {
     if (mActiveWindow != window) {
@@ -927,23 +927,22 @@ void nsFocusManager::WindowShown(mozIDOMWindowProxy* aWindow,
 
   nsCOMPtr<nsPIDOMWindowOuter> window = nsPIDOMWindowOuter::From(aWindow);
 
-  if (MOZ_LOG_TEST(gFocusLog, LogLevel::Debug)) {
-    LOGFOCUS(("Window %p Shown [Currently: %p %p]", window.get(),
-              mActiveWindow.get(), mFocusedWindow.get()));
+    fprintf(stderr, "TESTINPUTMODE Window %p Shown [Currently: %p %p]\n", window.get(),
+              mActiveWindow.get(), mFocusedWindow.get());
     Document* doc = window->GetExtantDoc();
     if (doc && doc->GetDocumentURI()) {
-      LOGFOCUS(("Shown Window: %s",
-                doc->GetDocumentURI()->GetSpecOrDefault().get()));
+      fprintf(stderr, "TESTINPUTMODE Shown Window: %s\n",
+                doc->GetDocumentURI()->GetSpecOrDefault().get());
     }
 
     if (mFocusedWindow) {
       doc = mFocusedWindow->GetExtantDoc();
       if (doc && doc->GetDocumentURI()) {
-        LOGFOCUS((" Focused Window: %s",
-                  doc->GetDocumentURI()->GetSpecOrDefault().get()));
+        fprintf(stderr, "TESTINPUTMODE Focused Window: %s\n",
+                  doc->GetDocumentURI()->GetSpecOrDefault().get());
       }
     }
-  }
+    fflush(stderr);
 
   if (XRE_IsParentProcess()) {
     if (BrowsingContext* bc = window->GetBrowsingContext()) {
@@ -986,32 +985,31 @@ void nsFocusManager::WindowHidden(mozIDOMWindowProxy* aWindow,
 
   nsCOMPtr<nsPIDOMWindowOuter> window = nsPIDOMWindowOuter::From(aWindow);
 
-  if (MOZ_LOG_TEST(gFocusLog, LogLevel::Debug)) {
-    LOGFOCUS(("Window %p Hidden [Currently: %p %p]", window.get(),
-              mActiveWindow.get(), mFocusedWindow.get()));
+    fprintf(stderr, "TESTINPUTMODE Window %p Hidden [Currently: %p %p]\n", window.get(),
+              mActiveWindow.get(), mFocusedWindow.get());
     nsAutoCString spec;
     Document* doc = window->GetExtantDoc();
     if (doc && doc->GetDocumentURI()) {
-      LOGFOCUS(("  Hide Window: %s",
-                doc->GetDocumentURI()->GetSpecOrDefault().get()));
+      fprintf(stderr, "TESTINPUTMODE   Hide Window: %s\n",
+                doc->GetDocumentURI()->GetSpecOrDefault().get());
     }
 
     if (mFocusedWindow) {
       doc = mFocusedWindow->GetExtantDoc();
       if (doc && doc->GetDocumentURI()) {
-        LOGFOCUS(("  Focused Window: %s",
-                  doc->GetDocumentURI()->GetSpecOrDefault().get()));
+        fprintf(stderr, "TESTINPUTMODE   Focused Window: %s\n",
+                  doc->GetDocumentURI()->GetSpecOrDefault().get());
       }
     }
 
     if (mActiveWindow) {
       doc = mActiveWindow->GetExtantDoc();
       if (doc && doc->GetDocumentURI()) {
-        LOGFOCUS(("  Active Window: %s",
-                  doc->GetDocumentURI()->GetSpecOrDefault().get()));
+        fprintf(stderr, "TESTINPUTMODE   Active Window: %s\n",
+                  doc->GetDocumentURI()->GetSpecOrDefault().get());
       }
     }
-  }
+    fflush(stderr);
 
   if (!IsSameOrAncestor(window, mFocusedWindow)) {
     return;
@@ -1292,6 +1290,35 @@ void nsFocusManager::ActivateOrDeactivate(nsPIDOMWindowOuter* aWindow,
   if (!aWindow) {
     return;
   }
+
+  nsCOMPtr<nsPIDOMWindowOuter> window = nsPIDOMWindowOuter::From(aWindow);
+
+    fprintf(stderr, "TESTINPUTMODE ActivateOrDeactivate %p [Currently: %p %p] %d\n", window.get(),
+              mActiveWindow.get(), mFocusedWindow.get(), aActive);
+    nsAutoCString spec;
+    Document* doc = window->GetExtantDoc();
+    if (doc && doc->GetDocumentURI()) {
+      fprintf(stderr, "TESTINPUTMODE   ActivateOrDeactivate: %s\n",
+                doc->GetDocumentURI()->GetSpecOrDefault().get());
+    }
+
+    if (mFocusedWindow) {
+      doc = mFocusedWindow->GetExtantDoc();
+      if (doc && doc->GetDocumentURI()) {
+        fprintf(stderr, "TESTINPUTMODE   Focused Window: %s\n",
+                  doc->GetDocumentURI()->GetSpecOrDefault().get());
+      }
+    }
+
+    if (mActiveWindow) {
+      doc = mActiveWindow->GetExtantDoc();
+      if (doc && doc->GetDocumentURI()) {
+        fprintf(stderr, "TESTINPUTMODE   Active Window: %s\n",
+                  doc->GetDocumentURI()->GetSpecOrDefault().get());
+      }
+    }
+    fflush(stderr);
+
 
   if (BrowsingContext* bc = aWindow->GetBrowsingContext()) {
     MOZ_ASSERT(bc->IsTop());
@@ -2727,6 +2754,27 @@ void nsFocusManager::RaiseWindow(nsPIDOMWindowOuter* aWindow,
                                  CallerType aCallerType, uint64_t aActionId) {
   // don't raise windows that are already raised or are in the process of
   // being lowered
+    nsCOMPtr<nsPIDOMWindowOuter> window(aWindow);
+
+    fprintf(stderr, "TESTINPUTMODE RaiseWindow %p [Currently: %p %p]\n", aWindow,
+              mActiveWindow.get(), mFocusedWindow.get());
+    if (window) {
+    Document* doc = window->GetExtantDoc();
+    if (doc && doc->GetDocumentURI()) {
+      fprintf(stderr, "TESTINPUTMODE   Raised Window: %p %s\n", aWindow,
+                doc->GetDocumentURI()->GetSpecOrDefault().get());
+    }
+    if (mActiveWindow) {
+      doc = mActiveWindow->GetExtantDoc();
+      if (doc && doc->GetDocumentURI()) {
+        fprintf(stderr, "TESTINPUTMODE   Active Window: %p %s\n", mActiveWindow.get(),
+                  doc->GetDocumentURI()->GetSpecOrDefault().get());
+      }
+    }
+  }
+
+    fflush(stderr);
+
 
   if (!aWindow || aWindow == mWindowBeingLowered) {
     return;
@@ -2754,7 +2802,6 @@ void nsFocusManager::RaiseWindow(nsPIDOMWindowOuter* aWindow,
     // a separate runnable to avoid touching multiple windows in
     // the current runnable.
 
-    nsCOMPtr<nsPIDOMWindowOuter> window(aWindow);
     RefPtr<nsFocusManager> self(this);
     NS_DispatchToCurrentThread(NS_NewRunnableFunction(
         "nsFocusManager::RaiseWindow", [self, window, aActionId]() -> void {

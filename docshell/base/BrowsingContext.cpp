@@ -2130,6 +2130,9 @@ void BrowsingContext::Focus(CallerType aCallerType, ErrorResult& aError) {
 
   auto [canFocus, isActive] = CanFocusCheck(aCallerType);
 
+  fprintf(stderr, "TESTINPUTMODE BrowsingContext::Focus canFocus = %d, isActive = %d\n", canFocus, isActive);
+  fflush(stderr);
+
   if (!(canFocus || isActive)) {
     return;
   }

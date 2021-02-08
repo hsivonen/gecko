@@ -10,11 +10,16 @@
     var testContext = location.search.substring(1);
     try {
       var topsOpener = window.top.opener;
+      dump("NAVIGATION2 WILL OPEN INNER\n");
       window.open("file_iframe_sandbox_top_navigation_pass.html?" + testContext, "_top");
+      dump("NAVIGATION2 DID OPEN INNER\n");
       topsOpener.postMessage({ok: true, desc: unescape(testContext) + "top navigation should be allowed by a document sandboxed with 'allow-top-navigation.'"}, "*");
     } catch(error) {
+      dump("NAVIGATION2 INNER OPEN THREW\n");
       window.top.opener.postMessage({ok: false, desc: unescape(testContext) + "error thrown during window.open(..., \"_top\")"}, "*");
+      dump("NAVIGATION2 WILL CLOSE FROM CATCH\n");
       window.top.close();
+      dump("NAVIGATION2 DID CLOSE FROM CATCH\n");
     }
   }
 </script>

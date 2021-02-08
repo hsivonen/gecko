@@ -414,11 +414,6 @@ static nsGlobalWindowOuter* GetOuterWindowForForwarding(
 static LazyLogModule gDOMLeakPRLogInner("DOMLeakInner");
 extern mozilla::LazyLogModule gTimeoutLog;
 
-#ifdef DEBUG
-static LazyLogModule gDocShellAndDOMWindowLeakLogging(
-    "DocShellAndDOMWindowLeak");
-#endif
-
 static FILE* gDumpFile = nullptr;
 
 nsGlobalWindowInner::InnerWindowByIdTable*
@@ -992,15 +987,13 @@ nsGlobalWindowInner::nsGlobalWindowInner(nsGlobalWindowOuter* aOuterWindow,
     }
   }
 
-#ifdef DEBUG
   mSerial = nsContentUtils::InnerOrOuterWindowCreated();
 
-  MOZ_LOG(gDocShellAndDOMWindowLeakLogging, LogLevel::Info,
-          ("++DOMWINDOW == %d (%p) [pid = %d] [serial = %d] [outer = %p]\n",
+  fprintf(stderr, "TESTINPUTMODE ++DOMWINDOW == %d (%p) [pid = %d] [serial = %d] [outer = %p]\n",
            nsContentUtils::GetCurrentInnerOrOuterWindowCount(),
            static_cast<void*>(ToCanonicalSupports(this)), getpid(), mSerial,
-           static_cast<void*>(ToCanonicalSupports(aOuterWindow))));
-#endif
+           static_cast<void*>(ToCanonicalSupports(aOuterWindow)));
+  fflush(stderr);
 
   MOZ_LOG(gDOMLeakPRLogInner, LogLevel::Debug,
           ("DOMWINDOW %p created outer=%p", this, aOuterWindow));
@@ -1063,8 +1056,7 @@ nsGlobalWindowInner::~nsGlobalWindowInner() {
 
   nsContentUtils::InnerOrOuterWindowDestroyed();
 
-#ifdef DEBUG
-  if (MOZ_LOG_TEST(gDocShellAndDOMWindowLeakLogging, LogLevel::Info)) {
+  {
     nsAutoCString url;
     if (mLastOpenedURI) {
       url = mLastOpenedURI->GetSpecOrDefault();
@@ -1077,15 +1069,13 @@ nsGlobalWindowInner::~nsGlobalWindowInner() {
     }
 
     nsGlobalWindowOuter* outer = nsGlobalWindowOuter::Cast(mOuterWindow);
-    MOZ_LOG(
-        gDocShellAndDOMWindowLeakLogging, LogLevel::Info,
-        ("--DOMWINDOW == %d (%p) [pid = %d] [serial = %d] [outer = %p] [url = "
+    fprintf(stderr, "TESTINPUTMODE --DOMWINDOW == %d (%p) [pid = %d] [serial = %d] [outer = %p] [url = "
          "%s]\n",
          nsContentUtils::GetCurrentInnerOrOuterWindowCount(),
          static_cast<void*>(ToCanonicalSupports(this)), getpid(), mSerial,
-         static_cast<void*>(ToCanonicalSupports(outer)), url.get()));
+         static_cast<void*>(ToCanonicalSupports(outer)), url.get());
+    fflush(stderr);
   }
-#endif
   MOZ_LOG(gDOMLeakPRLogInner, LogLevel::Debug,
           ("DOMWINDOW %p destroyed", this));
 

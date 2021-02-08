@@ -40,10 +40,13 @@
 <input id="d1" inputmode="URL"> <!-- no lowercase -->
 </div>
 <pre id="test">
-<script class=testbody" type="application/javascript">
+<script class="testbody" type="application/javascript">
+dump("TESTINPUTMODE test_inputmode start\n");
 SimpleTest.waitForExplicitFinish();
 
+dump("TESTINPUTMODE test_inputmode will wait for focus\n");
 SimpleTest.waitForFocus(async () => {
+  dump("TESTINPUTMODE test_inputmode got focus\n");
   await SpecialPowers.setBoolPref("dom.forms.inputmode", true);
 
   const tests = [
@@ -94,6 +97,7 @@ SimpleTest.waitForFocus(async () => {
   }
 
   SpecialPowers.clearUserPref("dom.forms.inputmode");
+  dump("TESTINPUTMODE test_inputmode finish\n");
   SimpleTest.finish();
 });
 </script>

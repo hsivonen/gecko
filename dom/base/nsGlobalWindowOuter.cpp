@@ -5048,6 +5048,9 @@ void nsGlobalWindowOuter::FocusOuter(CallerType aCallerType,
 
   auto [canFocus, isActive] = GetBrowsingContext()->CanFocusCheck(aCallerType);
 
+  fprintf(stderr, "TESTINPUTMODE FocusOuter canFocus = %d, isActive = %d\n", canFocus, isActive);
+  fflush(stderr);
+
   nsCOMPtr<nsIBaseWindow> treeOwnerAsWin = GetTreeOwnerWindow();
   if (treeOwnerAsWin && (canFocus || isActive)) {
     bool isEnabled = true;
