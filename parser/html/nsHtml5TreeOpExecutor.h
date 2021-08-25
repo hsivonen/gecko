@@ -60,6 +60,8 @@ class nsHtml5TreeOpExecutor final
    */
   bool mSuppressEOF;
 
+  bool mPendingEncodingCommitment;
+
   bool mReadingFromStage;
   nsTArray<nsHtml5TreeOperation> mOpQueue;
   nsHtml5StreamParser* mStreamParser;
@@ -181,6 +183,8 @@ class nsHtml5TreeOpExecutor final
 
   nsresult FlushDocumentWrite();
 
+  void CommitToInternalEncoding();
+
   void MaybeSuspend();
 
   void Start();
@@ -191,7 +195,7 @@ class nsHtml5TreeOpExecutor final
   void MaybeComplainAboutCharset(const char* aMsgId, bool aError,
                                  uint32_t aLineNumber);
 
-  void ComplainAboutBogusProtocolCharset(mozilla::dom::Document*);
+  void ComplainAboutBogusProtocolCharset(mozilla::dom::Document*, bool);
 
   void MaybeComplainAboutDeepTree(uint32_t aLineNumber);
 

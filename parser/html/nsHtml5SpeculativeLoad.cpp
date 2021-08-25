@@ -11,7 +11,7 @@ using namespace mozilla;
 nsHtml5SpeculativeLoad::nsHtml5SpeculativeLoad()
     : mOpCode(eSpeculativeLoadUninitialized),
       mIsAsync(false),
-      mIsDefer(false),
+      mIsDeferOrError(false),
       mIsLinkPreload(false),
       mEncoding(nullptr) {
   MOZ_COUNT_CTOR(nsHtml5SpeculativeLoad);
@@ -22,7 +22,8 @@ nsHtml5SpeculativeLoad::~nsHtml5SpeculativeLoad() {
   MOZ_COUNT_DTOR(nsHtml5SpeculativeLoad);
   NS_ASSERTION(mOpCode != eSpeculativeLoadUninitialized,
                "Uninitialized speculative load.");
-  if (mOpCode != eSpeculativeLoadSetDocumentCharset) {
+  if (!(mOpCode == eSpeculativeLoadSetDocumentCharset ||
+        mOpCode == eSpeculativeLoadMaybeComplainAboutCharset)) {
     mCharsetOrSrcset.~nsString();
   }
 }
@@ -62,7 +63,7 @@ void nsHtml5SpeculativeLoad::Perform(nsHtml5TreeOpExecutor* aExecutor) {
           mUrlOrSizes, mCharsetOrSrcset,
           mTypeOrCharsetSourceOrDocumentModeOrMetaCSPOrSizesOrIntegrity,
           mCrossOrigin, mMedia, mReferrerPolicyOrIntegrity,
-          mScriptReferrerPolicy, false, mIsAsync, mIsDefer, false,
+          mScriptReferrerPolicy, false, mIsAsync, mIsDeferOrError, false,
           mIsLinkPreload);
       break;
     case eSpeculativeLoadScriptFromHead:
@@ -70,7 +71,7 @@ void nsHtml5SpeculativeLoad::Perform(nsHtml5TreeOpExecutor* aExecutor) {
           mUrlOrSizes, mCharsetOrSrcset,
           mTypeOrCharsetSourceOrDocumentModeOrMetaCSPOrSizesOrIntegrity,
           mCrossOrigin, mMedia, mReferrerPolicyOrIntegrity,
-          mScriptReferrerPolicy, true, mIsAsync, mIsDefer, false,
+          mScriptReferrerPolicy, true, mIsAsync, mIsDeferOrError, false,
           mIsLinkPreload);
       break;
     case eSpeculativeLoadNoModuleScript:
@@ -78,7 +79,7 @@ void nsHtml5SpeculativeLoad::Perform(nsHtml5TreeOpExecutor* aExecutor) {
           mUrlOrSizes, mCharsetOrSrcset,
           mTypeOrCharsetSourceOrDocumentModeOrMetaCSPOrSizesOrIntegrity,
           mCrossOrigin, mMedia, mReferrerPolicyOrIntegrity,
-          mScriptReferrerPolicy, false, mIsAsync, mIsDefer, true,
+          mScriptReferrerPolicy, false, mIsAsync, mIsDeferOrError, true,
           mIsLinkPreload);
       break;
     case eSpeculativeLoadNoModuleScriptFromHead:
@@ -86,7 +87,7 @@ void nsHtml5SpeculativeLoad::Perform(nsHtml5TreeOpExecutor* aExecutor) {
           mUrlOrSizes, mCharsetOrSrcset,
           mTypeOrCharsetSourceOrDocumentModeOrMetaCSPOrSizesOrIntegrity,
           mCrossOrigin, mMedia, mReferrerPolicyOrIntegrity,
-          mScriptReferrerPolicy, true, mIsAsync, mIsDefer, true,
+          mScriptReferrerPolicy, true, mIsAsync, mIsDeferOrError, true,
           mIsLinkPreload);
       break;
     case eSpeculativeLoadStyle:
@@ -100,9 +101,9 @@ void nsHtml5SpeculativeLoad::Perform(nsHtml5TreeOpExecutor* aExecutor) {
       // TODO: remove this
       break;
     case eSpeculativeLoadSetDocumentCharset: {
-      NS_ASSERTION(mTypeOrCharsetSourceOrDocumentModeOrMetaCSPOrSizesOrIntegrity
-                           .Length() == 1,
-                   "Unexpected charset source string");
+      MOZ_ASSERT(mTypeOrCharsetSourceOrDocumentModeOrMetaCSPOrSizesOrIntegrity
+                         .Length() == 1,
+                 "Unexpected charset source string");
       int32_t intSource =
           (int32_t)mTypeOrCharsetSourceOrDocumentModeOrMetaCSPOrSizesOrIntegrity
               .First();
@@ -129,6 +130,22 @@ void nsHtml5SpeculativeLoad::Perform(nsHtml5TreeOpExecutor* aExecutor) {
       aExecutor->PreloadFetch(mUrlOrSizes, mCrossOrigin, mMedia,
                               mReferrerPolicyOrIntegrity);
       break;
+    case eSpeculativeLoadMaybeComplainAboutCharset: {
+      MOZ_ASSERT(mTypeOrCharsetSourceOrDocumentModeOrMetaCSPOrSizesOrIntegrity
+                         .Length() == 2,
+                 "Unexpected line number string");
+      uint32_t high =
+          (uint32_t)
+              mTypeOrCharsetSourceOrDocumentModeOrMetaCSPOrSizesOrIntegrity
+                  .CharAt(0);
+      uint32_t low =
+          (uint32_t)
+              mTypeOrCharsetSourceOrDocumentModeOrMetaCSPOrSizesOrIntegrity
+                  .CharAt(1);
+      uint32_t line = (high << 16) | low;
+      aExecutor->MaybeComplainAboutCharset(mMsgId, mIsDeferOrError,
+                                           (int32_t)line);
+    } break;
     default:
       MOZ_ASSERT_UNREACHABLE("Bogus speculative load.");
       break;

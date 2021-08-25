@@ -52,7 +52,6 @@ class nsHtml5StreamParser;
 class nsHtml5AttributeName;
 class nsHtml5ElementName;
 class nsHtml5TreeBuilder;
-class nsHtml5MetaScanner;
 class nsHtml5UTF16Buffer;
 class nsHtml5StateSnapshot;
 class nsHtml5Portability;
@@ -270,6 +269,7 @@ class nsHtml5Tokenizer {
 
  private:
   bool seenDigits;
+  bool inTokenStartedAtKilobyteBoundary;
 
  protected:
   int32_t cstart;
@@ -452,6 +452,9 @@ class nsHtml5Tokenizer {
 
  private:
   void emitDoctypeToken(int32_t pos);
+  void suspendIfInTokenStartedAtKilobyteBoundary();
+  void atKilobyteBoundary();
+  bool isInTokenStartedAtKilobyteBoundary();
 
  protected:
   inline char16_t checkChar(char16_t* buf, int32_t pos) { return buf[pos]; }
