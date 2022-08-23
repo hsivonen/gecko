@@ -64,15 +64,27 @@ WindowGlobalInit WindowGlobalActor::BaseInitializer(
 }
 
 WindowGlobalInit WindowGlobalActor::AboutBlankInitializer(
-    dom::BrowsingContext* aBrowsingContext, nsIPrincipal* aPrincipal) {
+    dom::BrowsingContext* aBrowsingContext,
+    nsIOpenWindowInfo* aOpenWindowInfo) {
+  using Indexes = WindowContext::FieldIndexes;
+
   WindowGlobalInit init =
       BaseInitializer(aBrowsingContext, nsContentUtils::GenerateWindowId(),
                       nsContentUtils::GenerateWindowId());
 
-  init.principal() = aPrincipal;
-  init.storagePrincipal() = aPrincipal;
+  init.principal() = aOpenWindowInfo->GetPrincipalToInheritForAboutBlank();
+  init.storagePrincipal() =
+      aOpenWindowInfo
+          ->GetPartitionedPrincipalToInheritForAboutBlank();
   Unused << NS_NewURI(getter_AddRefs(init.documentURI()), "about:blank");
   init.isInitialDocument() = true;
+
+  auto& fields = init.context().mFields;
+  // XXX should this assert that `InheritedPolicy(aBrowsingContext)` and
+  // `aOpenWindowInfo->GetCoepToInheritForAboutBlank()` match?
+  if (auto policy = aOpenWindowInfo->GetCoepToInheritForAboutBlank()) {
+    fields.Get<Indexes::IDX_EmbedderPolicy>() = *policy;
+  }
 
   return init;
 }

@@ -346,7 +346,7 @@ async function calcPopUpWindowChromeUISize() {
 
       await new Promise(resolve => {
         win = content.open("about:blank", "", "width=1000,height=1000");
-        win.onload = () => resolve();
+        resolve();
       });
 
       let res = {

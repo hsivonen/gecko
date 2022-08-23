@@ -1043,6 +1043,16 @@ class Document : public nsINode,
    */
   void SetIsInitialDocument(bool aIsInitialDocument);
 
+  bool InitialAboutBlankLoadCompleting() const {
+    return mInitialAboutBlankLoadCompleting;
+  }
+
+  void BeginInitialAboutBlankLoadCompleting(nsIChannel* aChannel);
+
+  void EndInitialAboutBlankLoadCompleting() {
+    mInitialAboutBlankLoadCompleting = false;
+  }
+
   void SetLoadedAsData(bool aLoadedAsData, bool aConsiderForMemoryReporting);
 
   TimeStamp GetLoadingOrRestoredFromBFCacheTimeStamp() const {
@@ -4583,6 +4593,13 @@ class Document : public nsINode,
   // documents created to satisfy a GetDocument() on a window when there's no
   // document in it.
   bool mIsInitialDocumentInWindow : 1;
+
+  // True if we are trying to fire the load event for the initial about:blank.
+  // Since the initial about:blank is already in READYSTATE_COMPLETE when
+  // firing the load event, a different indicator is needed.
+  // mIsInitialDocumentInWindow isn't a sufficient indicator, because it
+  // remains set, when navigating back in history.
+  bool mInitialAboutBlankLoadCompleting : 1;
 
   bool mIgnoreDocGroupMismatches : 1;
 

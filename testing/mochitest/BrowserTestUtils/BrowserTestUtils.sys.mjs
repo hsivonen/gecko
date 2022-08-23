@@ -786,6 +786,12 @@ export var BrowserTestUtils = {
             result = newTab;
           }
 
+          if (urlMatches("about:blank")) {
+            // This is going to be a problem once about:blank?foo becomes magic.
+            TestUtils.executeSoon(() => resolve(result));
+            return;
+          }
+
           let progressListener = {
             onLocationChange(aBrowser) {
               // Only interested in location changes on our browser.

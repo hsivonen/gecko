@@ -9,6 +9,8 @@
 
 #include "nsWrapperCache.h"
 #include "nsISupports.h"
+#include "nsILoadInfo.h"
+#include "nsIOpenWindowInfo.h"
 #include "mozilla/dom/BrowsingContext.h"
 #include "nsIURI.h"
 #include "nsString.h"
@@ -27,7 +29,8 @@ class WindowGlobalActor : public JSActorManager {
   // Called to determine initial state for a window global actor created for an
   // initial about:blank document.
   static WindowGlobalInit AboutBlankInitializer(
-      dom::BrowsingContext* aBrowsingContext, nsIPrincipal* aPrincipal);
+      dom::BrowsingContext* aBrowsingContext,
+      nsIOpenWindowInfo* aOpenWindowInfo);
 
   // Called to determine initial state for a window global actor created for a
   // specific existing nsGlobalWindowInner.

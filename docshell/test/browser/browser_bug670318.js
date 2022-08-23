@@ -36,7 +36,7 @@ add_task(async function test() {
             owner: this,
             OnHistoryNewEntry(aNewURI) {
               info("OnHistoryNewEntry " + aNewURI.spec + ", " + count);
-              if (aNewURI.spec == URL && 5 == ++count) {
+              if (aNewURI.spec == URL && 4 == ++count) {
                 addEventListener(
                   "load",
                   function onLoad() {
@@ -95,7 +95,7 @@ add_task(async function test() {
 
       let listener = {
         async OnHistoryNewEntry(aNewURI) {
-          if (aNewURI.spec == URL && 5 == ++count) {
+          if (aNewURI.spec == URL && 4 == ++count) {
             history.removeSHistoryListener(listener);
             await ContentTask.spawn(browser, null, () => {
               return new Promise(resolve => {

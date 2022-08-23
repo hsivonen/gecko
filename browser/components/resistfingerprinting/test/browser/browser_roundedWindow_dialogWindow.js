@@ -14,13 +14,7 @@ async function test_dialog_window() {
       "innerWidth=250,innerHeight=350"
     );
 
-    diagWin.addEventListener(
-      "load",
-      function () {
-        resolve();
-      },
-      { once: true }
-    );
+    resolve();
   });
 
   is(diagWin.innerWidth, 250, "The dialog window doesn't have a rounded size.");

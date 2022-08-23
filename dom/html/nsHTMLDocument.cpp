@@ -334,20 +334,6 @@ nsresult nsHTMLDocument::StartDocumentLoad(
     loadAsHtml5 = false;
   }
 
-  // TODO: Proper about:blank treatment is bug 543435
-  if (loadAsHtml5 && view) {
-    // mDocumentURI hasn't been set, yet, so get the URI from the channel
-    nsCOMPtr<nsIURI> uri;
-    aChannel->GetOriginalURI(getter_AddRefs(uri));
-    // Adapted from nsDocShell:
-    // GetSpec can be expensive for some URIs, so check the scheme first.
-    if (uri && uri->SchemeIs("about")) {
-      if (uri->GetSpecOrDefault().EqualsLiteral("about:blank")) {
-        loadAsHtml5 = false;
-      }
-    }
-  }
-
   nsresult rv = Document::StartDocumentLoad(aCommand, aChannel, aLoadGroup,
                                             aContainer, aDocListener, aReset);
   if (NS_FAILED(rv)) {
@@ -375,6 +361,17 @@ nsresult nsHTMLDocument::StartDocumentLoad(
       }
     } else if (mViewSource && !html) {
       html5Parser->MarkAsNotScriptCreated("view-source-xml");
+    } else if (view && NS_IsAboutBlank(uri)) {
+      // Sadness: There are Chromium-originating WPTs that assume that
+      // as soon as `iframe.contentWindow.location.href == "about:blank"`,
+      // the about:blank DOM also exists for _non-initial_ about:blank.
+      // Since Chromium-originating WPTs manage to expect this, chances
+      // are that Web content might expect this as well, and the
+      // expectation was valid in Gecko previously. Therefore, let's
+      // special-case even _non-initial_ about:blank.
+      // https://searchfox.org/mozilla-central/source/testing/web-platform/tests/content-security-policy/inheritance/history-iframe.sub.html
+      // https://searchfox.org/mozilla-central/source/testing/web-platform/tests/content-security-policy/inheritance/window-open-local-after-network-scheme.sub.html
+      html5Parser->MarkAsNotScriptCreated("about-blank");
     } else {
       html5Parser->MarkAsNotScriptCreated(aCommand);
     }
@@ -491,15 +488,8 @@ nsresult nsHTMLDocument::StartDocumentLoad(
       mParser->SetContentSink(xmlsink);
     }
   } else {
-    if (loadAsHtml5) {
-      html5Parser->Initialize(this, uri, docShell, aChannel);
-    } else {
-      // about:blank *only*
-      nsCOMPtr<nsIHTMLContentSink> htmlsink;
-      NS_NewHTMLContentSink(getter_AddRefs(htmlsink), this, uri, docShell,
-                            aChannel);
-      mParser->SetContentSink(htmlsink);
-    }
+    MOZ_ASSERT(loadAsHtml5);
+    html5Parser->Initialize(this, uri, docShell, aChannel);
   }
 
   // parser the content of the URI

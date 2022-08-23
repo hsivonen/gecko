@@ -985,15 +985,16 @@ nsDocumentViewer::LoadComplete(nsresult aStatus) {
     // But we can detect the restoring case very simply: by whether our
     // document's readyState is COMPLETE.
     restoring =
-        (mDocument->GetReadyStateEnum() == Document::READYSTATE_COMPLETE);
+        (mDocument->GetReadyStateEnum() == Document::READYSTATE_COMPLETE) &&
+        !mDocument->InitialAboutBlankLoadCompleting();
     if (!restoring) {
       NS_ASSERTION(
           mDocument->GetReadyStateEnum() == Document::READYSTATE_INTERACTIVE ||
               // test_stricttransportsecurity.html has old-style
               // docshell-generated about:blank docs reach this code!
               (mDocument->GetReadyStateEnum() ==
-                   Document::READYSTATE_UNINITIALIZED &&
-               NS_IsAboutBlank(mDocument->GetDocumentURI())),
+                   Document::READYSTATE_COMPLETE &&
+               mDocument->InitialAboutBlankLoadCompleting()),
           "Bad readystate");
 #ifdef DEBUG
       bool docShellThinksWeAreRestoring;
@@ -1003,7 +1004,9 @@ nsDocumentViewer::LoadComplete(nsresult aStatus) {
                  "READYSTATE_COMPLETE document?");
 #endif  // DEBUG
       nsCOMPtr<Document> d = mDocument;
-      mDocument->SetReadyStateInternal(Document::READYSTATE_COMPLETE);
+      if (!mDocument->InitialAboutBlankLoadCompleting()) {
+        mDocument->SetReadyStateInternal(Document::READYSTATE_COMPLETE);
+      }
 
       RefPtr<nsDOMNavigationTiming> timing(d->GetNavigationTiming());
       if (timing) {

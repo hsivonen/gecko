@@ -162,6 +162,8 @@ class nsFrameLoader final : public nsStubMutationObserver,
   nsresult DoRemoteStaticClone(nsFrameLoader* aStaticCloneOf,
                                nsIPrintSettings* aPrintSettings);
 
+  void ShouldSetFirstLoad() { mSetFirstLoad = true; }
+
   // WebIDL methods
 
   nsDocShell* GetDocShell(mozilla::ErrorResult& aRv);
@@ -438,7 +440,8 @@ class nsFrameLoader final : public nsStubMutationObserver,
    * If we are an IPC frame, set mRemoteFrame. Otherwise, create and
    * initialize mDocShell.
    */
-  nsresult MaybeCreateDocShell();
+  nsresult MaybeCreateDocShell(
+      bool doNotInheritPrincipalIntoAboutBlank = false);
   nsresult EnsureMessageManager();
   nsresult ReallyLoadFrameScripts();
   nsDocShell* GetDocShell() const { return mDocShell; }
@@ -563,6 +566,11 @@ class nsFrameLoader final : public nsStubMutationObserver,
   // When an out-of-process nsFrameLoader crashes, an event is fired on the
   // frame. To ensure this is only fired once, this bit is checked.
   bool mTabProcessCrashFired : 1;
+
+  // Set to true if the next execution of
+  // nsFrameLoader::ReallyStartLoadingInternal should set
+  // nsIWebNavigation::LOAD_FLAGS_FIRST_LOAD in the load state.
+  bool mSetFirstLoad : 1;
 };
 
 NS_DEFINE_STATIC_IID_ACCESSOR(nsFrameLoader, NS_FRAMELOADER_IID)

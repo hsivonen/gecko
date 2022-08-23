@@ -60,6 +60,8 @@
 #include "nsIXPConnect.h"
 #include "nsImportModule.h"
 #include "UnitTransforms.h"
+#include "nsIOpenWindowInfo.h"
+#include "nsOpenWindowInfo.h"
 
 using namespace mozilla::ipc;
 
@@ -1851,8 +1853,12 @@ nsresult CanonicalBrowsingContext::PendingRemotenessChange::FinishSubframe() {
 
   nsCOMPtr<nsIPrincipal> initialPrincipal =
       NullPrincipal::Create(target->OriginAttributesRef());
+  RefPtr<nsOpenWindowInfo> openWindowInfo = new nsOpenWindowInfo();
+  openWindowInfo->mPrincipalToInheritForAboutBlank = initialPrincipal;
+  openWindowInfo->mPartitionedPrincipalToInheritForAboutBlank =
+      initialPrincipal;
   WindowGlobalInit windowInit =
-      WindowGlobalActor::AboutBlankInitializer(target, initialPrincipal);
+      WindowGlobalActor::AboutBlankInitializer(target, openWindowInfo);
 
   // Create and initialize our new BrowserBridgeParent.
   TabId tabId(nsContentUtils::GenerateTabId());

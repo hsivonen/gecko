@@ -20,10 +20,10 @@ add_task(async function () {
 
       // Create an iframe element with the same id "fake-iframe".
       const iframe = content.document.createElement("iframe");
-      content.document.body.appendChild(iframe);
       iframe.setAttribute("id", "fake-iframe");
+      iframe.src = "data:text/html,";
 
-      iframe.contentWindow.addEventListener("load", () => {
+      iframe.addEventListener("load", () => {
         // Create a div element and append it to the iframe
         const div = content.document.createElement("div");
         div.id = "in-frame";
@@ -34,6 +34,7 @@ add_task(async function () {
         frameContent.appendChild(div);
         resolve();
       });
+      content.document.body.appendChild(iframe);
     });
   });
 

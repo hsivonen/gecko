@@ -201,14 +201,14 @@ function promiseDocumentIdle(window) {
 }
 
 /**
- * Returns a Promise which resolves when the given document is fully
- * loaded.
+ * Returns a Promise which resolves when the given non-about:blank
+ * document is fully loaded.
  *
  * @param {Document} doc The document to await the load of.
  * @returns {Promise<Document>}
  */
 function promiseDocumentLoaded(doc) {
-  if (doc.readyState == "complete") {
+  if (doc.readyState == "complete" && doc.location.href != "about:blank") {
     return Promise.resolve(doc);
   }
 

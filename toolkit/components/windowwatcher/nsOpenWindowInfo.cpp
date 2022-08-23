@@ -44,6 +44,33 @@ NS_IMETHODIMP nsOpenWindowInfo::GetScriptableOriginAttributes(
   return NS_OK;
 }
 
+nsIPrincipal* nsOpenWindowInfo::GetPrincipalToInheritForAboutBlank() {
+  MOZ_ASSERT(mPrincipalToInheritForAboutBlank, "Must have principal");
+  return mPrincipalToInheritForAboutBlank;
+}
+
+nsIPrincipal*
+nsOpenWindowInfo::GetPartitionedPrincipalToInheritForAboutBlank() {
+  if (mPartitionedPrincipalToInheritForAboutBlank) {
+    return mPartitionedPrincipalToInheritForAboutBlank;
+  }
+  MOZ_ASSERT(mPrincipalToInheritForAboutBlank, "Must have principal");
+  return mPrincipalToInheritForAboutBlank;
+}
+
+nsIURI* nsOpenWindowInfo::GetBaseUriToInheritForAboutBlank() {
+  return mBaseUriToInheritForAboutBlank;
+}
+
+nsIContentSecurityPolicy* nsOpenWindowInfo::GetCspToInheritForAboutBlank() {
+  return mCspToInheritForAboutBlank;
+}
+
+const mozilla::Maybe<nsILoadInfo::CrossOriginEmbedderPolicy>&
+nsOpenWindowInfo::GetCoepToInheritForAboutBlank() {
+  return mCoepToInheritForAboutBlank;
+}
+
 const mozilla::OriginAttributes& nsOpenWindowInfo::GetOriginAttributes() {
   return mOriginAttributes;
 }

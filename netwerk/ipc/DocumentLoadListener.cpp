@@ -1762,6 +1762,7 @@ static RefPtr<dom::BrowsingContextCallbackReceivedPromise> SwitchToNewTab(
   openInfo->mParent = aLoadingBrowsingContext;
   openInfo->mForceNoOpener = true;
   openInfo->mIsRemote = true;
+  openInfo->mPrincipalToInheritForAboutBlank = triggeringPrincipal;
 
   // Do the actual work to open a new tab or window async.
   nsresult rv = NS_DispatchToMainThread(NS_NewRunnableFunction(

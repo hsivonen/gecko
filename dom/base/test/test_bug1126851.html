@@ -14,19 +14,23 @@ https://bugzilla.mozilla.org/show_bug.cgi?id=1126851
 
   SimpleTest.waitForExplicitFinish();
 
+  let gotUnload = false;
+
   function runTest() {
     win = window.open("about:blank", "");
-    win.onload = function() {
-      win.onunload = function() {
+    win.onunload = function() {
+      if (gotUnload) {
+        SimpleTest.finish();
+      } else {
+        gotUnload = true;
         ok(true, "got unload");
         win.close();
-        SimpleTest.finish();
       }
-      win.onresize = function() {
-        win.location.reload();
-      }
-      win.document.dispatchEvent(new win.Event("resize", { bubbles: true }));
     }
+    win.onresize = function() {
+      win.location.reload();
+    }
+    win.document.dispatchEvent(new win.Event("resize", { bubbles: true }));
   }
 
 

@@ -2162,7 +2162,8 @@ XMLHttpRequestMainThread::OnStopRequest(nsIRequest* request, nsresult status) {
   AUTO_PROFILER_LABEL("XMLHttpRequestMainThread::OnStopRequest", NETWORK);
 
   if (request != mChannel) {
-    // Can this still happen?
+    // This can happen when we have already faked an OnStopRequest earlier
+    // when synchrously canceling a sync XHR.
     return NS_OK;
   }
 
@@ -3178,12 +3179,30 @@ void XMLHttpRequestMainThread::SendInternal(const BodyExtractorBase* aBody,
       return;
     }
 
+    nsresult channelStatus = NS_OK;
     nsAutoSyncOperation sync(suspendedDoc,
                              SyncOperationBehavior::eSuspendInput);
-    if (!SpinEventLoopUntil("XMLHttpRequestMainThread::SendInternal"_ns,
-                            [&]() { return !mFlagSyncLooping; })) {
+    if (!SpinEventLoopUntil("XMLHttpRequestMainThread::SendInternal"_ns, [&]() {
+          if (mFlagSyncLooping && mChannel) {
+            // The purpose of this check is to enable XHR channel cancelation
+            // upon navigating away from the page that is doing sync XHR
+            // to genuinely make the sync XHR go away within the same task.
+            mChannel->GetStatus(&channelStatus);
+            // Can't change mFlagSyncLooping to false, because other
+            // end-of-request code expects to be able to see it as true
+            // still even if we exit the loop early due to the channel
+            // getting canceled.
+          }
+          return !mFlagSyncLooping || NS_FAILED(channelStatus);
+        })) {
       aRv.Throw(NS_ERROR_UNEXPECTED);
       return;
+    }
+    if (NS_FAILED(channelStatus)) {
+      MOZ_ASSERT(mFlagSyncLooping);
+      // Fake OnStopRequest here to make it possible to cancel
+      // sync XHR fully synchronously.
+      OnStopRequest(mChannel, channelStatus);
     }
 
     // Time expired... We should throw.

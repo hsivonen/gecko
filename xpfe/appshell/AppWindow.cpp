@@ -158,7 +158,8 @@ NS_INTERFACE_MAP_END
 nsresult AppWindow::Initialize(nsIAppWindow* aParent, nsIAppWindow* aOpener,
                                int32_t aInitialWidth, int32_t aInitialHeight,
                                bool aIsHiddenWindow,
-                               widget::InitData& widgetInitData) {
+                               widget::InitData& widgetInitData,
+                               nsIOpenWindowInfo* aOpenWindowInfo) {
   nsresult rv;
   nsCOMPtr<nsIWidget> parentWidget;
 
@@ -237,9 +238,10 @@ nsresult AppWindow::Initialize(nsIAppWindow* aParent, nsIAppWindow* aOpener,
   mDocShell->SetTreeOwner(mChromeTreeOwner);
 
   r.MoveTo(0, 0);
-  NS_ENSURE_SUCCESS(mDocShell->InitWindow(nullptr, mWindow, r.X(), r.Y(),
-                                          r.Width(), r.Height()),
-                    NS_ERROR_FAILURE);
+  NS_ENSURE_SUCCESS(
+      mDocShell->InitWindow(nullptr, mWindow, r.X(), r.Y(), r.Width(),
+                            r.Height(), aOpenWindowInfo, nullptr),
+      NS_ERROR_FAILURE);
 
   // Attach a WebProgress listener.during initialization...
   mDocShell->AddProgressListener(this, nsIWebProgress::NOTIFY_STATE_NETWORK);
@@ -532,14 +534,6 @@ NS_IMETHODIMP AppWindow::ShowModal() {
 //*****************************************************************************
 // AppWindow::nsIBaseWindow
 //*****************************************************************************
-
-NS_IMETHODIMP AppWindow::InitWindow(nativeWindow aParentNativeWindow,
-                                    nsIWidget* parentWidget, int32_t x,
-                                    int32_t y, int32_t cx, int32_t cy) {
-  // XXX First Check In
-  NS_ASSERTION(false, "Not Yet Implemented");
-  return NS_OK;
-}
 
 NS_IMETHODIMP AppWindow::Destroy() {
   nsCOMPtr<nsIAppWindow> kungFuDeathGrip(this);

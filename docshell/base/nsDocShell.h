@@ -48,6 +48,7 @@ namespace dom {
 class ClientInfo;
 class ClientSource;
 class EventTarget;
+class WindowGlobalChild;
 class SessionHistoryInfo;
 struct LoadingSessionHistoryInfo;
 struct Wireframe;
@@ -72,6 +73,7 @@ class nsIURILoader;
 class nsIWebBrowserFind;
 class nsIWidget;
 class nsIReferrerInfo;
+class nsIOpenWindowInfo;
 
 class nsCommandManager;
 class nsDocShellEditorData;
@@ -178,7 +180,14 @@ class nsDocShell final : public nsDocLoader,
       mozilla::dom::BrowsingContext* aBrowsingContext,
       uint64_t aContentWindowID = 0);
 
-  bool Initialize();
+  bool Initialize(nsIOpenWindowInfo* aOpenWindowInfo,
+                  mozilla::dom::WindowGlobalChild* aWindowActor);
+
+  nsresult InitWindow(nativeWindow aParentNativeWindow,
+                      nsIWidget* aParentWidget, int32_t aX, int32_t aY,
+                      int32_t aWidth, int32_t aHeight,
+                      nsIOpenWindowInfo* aOpenWindowInfo,
+                      mozilla::dom::WindowGlobalChild* aWindowActor);
 
   NS_IMETHOD Stop() override {
     // Need this here because otherwise nsIWebNavigation::Stop
@@ -409,11 +418,6 @@ class nsDocShell final : public nsDocLoader,
   void SetWillChangeProcess() { mWillChangeProcess = true; }
   bool WillChangeProcess() { return mWillChangeProcess; }
 
-  // Create a content viewer within this nsDocShell for the given
-  // `WindowGlobalChild` actor.
-  nsresult CreateContentViewerForActor(
-      mozilla::dom::WindowGlobalChild* aWindowActor);
-
   // Creates a real network channel (not a DocumentChannel) using the specified
   // parameters.
   // Used by nsDocShell when not using DocumentChannel, by DocumentLoadListener
@@ -584,7 +588,9 @@ class nsDocShell final : public nsDocLoader,
   // Content Viewer Management
   //
 
-  nsresult EnsureContentViewer();
+  nsresult EnsureContentViewer(
+      bool aFromInit = false, nsIOpenWindowInfo* aOpenWindowInfo = nullptr,
+      mozilla::dom::WindowGlobalChild* aWindowActor = nullptr);
 
   // aPrincipal can be passed in if the caller wants. If null is
   // passed in, the about:blank principal will end up being used.
@@ -670,7 +676,7 @@ class nsDocShell final : public nsDocLoader,
       bool aNotifiedBeforeUnloadListeners = false);
 
  public:
-  bool IsAboutBlankLoadOntoInitialAboutBlank(nsIURI* aURI,
+  bool IsAboutBlankLoadOntoInitialAboutBlank(nsIURI* aURI, bool aOriginal,
                                              bool aInheritPrincipal,
                                              nsIPrincipal* aPrincipalToInherit);
 
@@ -937,6 +943,10 @@ class nsDocShell final : public nsDocLoader,
   // its real document and window are created.
   void MaybeCreateInitialClientSource(nsIPrincipal* aPrincipal = nullptr);
 
+  // Try to inherit the controller from same-origin parent.
+  void MaybeInheritController(mozilla::dom::ClientSource* aClientSource,
+                              nsIPrincipal* aPrincipal);
+
   // Determine if a service worker is allowed to control a window in this
   // docshell with the given URL.  If there are any reasons it should not,
   // this will return false.  If true is returned then the window *may* be
@@ -966,6 +976,9 @@ class nsDocShell final : public nsDocLoader,
 
   // Convenience method for getting our parent docshell. Can return null
   already_AddRefed<nsDocShell> GetInProcessParentDocshell();
+
+  // Convenience method for getting our opener docshell. Can return null
+  already_AddRefed<nsDocShell> GetInProcessOpenerDocshell();
 
   // Internal implementation of nsIDocShell::FirePageHideNotification.
   // If aSkipCheckingDynEntries is true, it will not try to remove dynamic

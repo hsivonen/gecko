@@ -5,11 +5,14 @@
  * file, You can obtain one at http://mozilla.org/MPL/2.0/. */
 
 #include "nsCOMPtr.h"
+#include "nsDocShell.h"
 #include "nsIBrowser.h"
 #include "nsIContent.h"
 #include "nsIOpenWindowInfo.h"
+#include "nsOpenWindowInfo.h"
 #include "nsFrameLoader.h"
 #include "mozilla/AsyncEventDispatcher.h"
+#include "mozilla/dom/BrowserParent.h"
 #include "mozilla/dom/HTMLIFrameElement.h"
 #include "mozilla/dom/WindowProxyHolder.h"
 #include "mozilla/dom/XULFrameElement.h"
@@ -97,6 +100,17 @@ void XULFrameElement::LoadSrc() {
     // being used as the target for a `window.open` call. Fetch that information
     // if it's available, and clear it out so we don't read it again.
     nsCOMPtr<nsIOpenWindowInfo> openWindowInfo = mOpenWindowInfo.forget();
+    if (!openWindowInfo) {
+      // This is the initial creation of a XUL frame that doesn't represent
+      // a window.open()ed window. Whatever we load next is the first load.
+      RefPtr<nsOpenWindowInfo> newOpenWindowInfo = new nsOpenWindowInfo();
+      Document* doc = OwnerDoc();
+      newOpenWindowInfo->mPrincipalToInheritForAboutBlank =
+          doc->NodePrincipal();
+      newOpenWindowInfo->mPartitionedPrincipalToInheritForAboutBlank =
+          doc->PartitionedPrincipal();
+      openWindowInfo = newOpenWindowInfo.forget();
+    }
 
     // false as the networkCreated parameter so that xul:iframe/browser/editor
     // session history handling works like dynamic html:iframes. Usually xul
@@ -105,6 +119,7 @@ void XULFrameElement::LoadSrc() {
     if (NS_WARN_IF(!mFrameLoader)) {
       return;
     }
+    mFrameLoader->ShouldSetFirstLoad();
 
     AsyncEventDispatcher::RunDOMEventWhenSafe(
         *this, u"XULFrameLoaderCreated"_ns, CanBubble::eYes);

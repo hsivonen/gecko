@@ -26,6 +26,12 @@ class nsOpenWindowInfo : public nsIOpenWindowInfo {
   mozilla::OriginAttributes mOriginAttributes;
   RefPtr<mozilla::dom::BrowsingContext> mParent;
   RefPtr<nsIBrowsingContextReadyCallback> mBrowsingContextReadyCallback;
+  nsCOMPtr<nsIPrincipal> mPrincipalToInheritForAboutBlank;
+  nsCOMPtr<nsIPrincipal> mPartitionedPrincipalToInheritForAboutBlank;
+  nsCOMPtr<nsIURI> mBaseUriToInheritForAboutBlank;
+  nsCOMPtr<nsIContentSecurityPolicy> mCspToInheritForAboutBlank;
+  mozilla::Maybe<nsILoadInfo::CrossOriginEmbedderPolicy>
+      mCoepToInheritForAboutBlank;
 
  private:
   virtual ~nsOpenWindowInfo() = default;

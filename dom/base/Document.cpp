@@ -1307,6 +1307,7 @@ Document::Document(const char* aContentType)
       mMayNeedFontPrefsUpdate(true),
       mMathMLEnabled(false),
       mIsInitialDocumentInWindow(false),
+      mInitialAboutBlankLoadCompleting(false),
       mIgnoreDocGroupMismatches(false),
       mLoadedAsData(false),
       mAddedToMemoryReportingAsDataDocument(false),
@@ -7996,7 +7997,7 @@ void Document::BeginLoad() {
   mDidFireDOMContentLoaded = false;
   BlockDOMContentLoaded();
 
-  if (mScriptLoader) {
+  if (mScriptLoader && !mIsInitialDocumentInWindow) {
     mScriptLoader->BeginDeferringScripts();
   }
 
@@ -8234,9 +8235,11 @@ void Document::UnblockDOMContentLoaded() {
     presShell->GetRefreshDriver()->NotifyDOMContentLoaded();
   }
 
-  MOZ_ASSERT(mReadyState == READYSTATE_INTERACTIVE);
+  MOZ_ASSERT(mIsInitialDocumentInWindow ||
+             mReadyState == READYSTATE_INTERACTIVE);
   if (!mSynchronousDOMContentLoaded) {
     MOZ_RELEASE_ASSERT(NS_IsMainThread());
+    MOZ_ASSERT(!mIsInitialDocumentInWindow);
     nsCOMPtr<nsIRunnable> ev =
         NewRunnableMethod("Document::DispatchContentLoadedEvents", this,
                           &Document::DispatchContentLoadedEvents);
@@ -9696,6 +9699,7 @@ Document* Document::Open(const Optional<nsAString>& /* unused */,
     RefPtr<nsCSPContext> cspToInherit = new nsCSPContext();
     cspToInherit->InitFromOther(static_cast<nsCSPContext*>(csp.get()));
     mCSP = cspToInherit;
+    ApplySettingsFromCSP(false);
   }
 
   // At this point we know this is a valid-enough document.open() call
@@ -18460,12 +18464,29 @@ nsIPrincipal* Document::GetPrincipalForPrefBasedHacks() const {
 
 void Document::SetIsInitialDocument(bool aIsInitialDocument) {
   mIsInitialDocumentInWindow = aIsInitialDocument;
+  mSynchronousDOMContentLoaded = aIsInitialDocument;
+  if (aIsInitialDocument) {
+    // Set readyState to complete silently.
+    mReadyState = READYSTATE_COMPLETE;
+    mSetCompleteAfterDOMContentLoaded = false;
+  }
 
   // Asynchronously tell the parent process that we are, or are no longer, the
   // initial document. This happens async.
   if (auto* wgc = GetWindowGlobalChild()) {
     wgc->SendSetIsInitialDocument(aIsInitialDocument);
   }
+}
+
+void Document::BeginInitialAboutBlankLoadCompleting(nsIChannel* aChannel) {
+  MOZ_ASSERT(aChannel);
+  mInitialAboutBlankLoadCompleting = true;
+  mChannel = aChannel;
+  mChannel->GetSecurityInfo(getter_AddRefs(mSecurityInfo));
+  if (!mMaybeServiceWorkerControlled && mDocumentContainer &&
+      mScriptGlobalObject) {
+    mMaybeServiceWorkerControlled = true;
+  }  // Is an else case even possible?
 }
 
 // static

@@ -82,11 +82,9 @@ add_task(async function save_worthy_tabs_remote_final() {
   ok(browser.isRemoteBrowser, "browser is remote");
 
   // Replace about:blank with a new remote page.
-  let entryReplaced = promiseOnHistoryReplaceEntry(browser);
   browser.loadURI(Services.io.newURI("https://example.com/"), {
     triggeringPrincipal: Services.scriptSecurityManager.getSystemPrincipal(),
   });
-  await entryReplaced;
 
   // Remotness shouldn't have changed.
   ok(browser.isRemoteBrowser, "browser is still remote");
@@ -94,16 +92,9 @@ add_task(async function save_worthy_tabs_remote_final() {
   // Remove the tab before the update arrives.
   let promise = promiseRemoveTabAndSessionState(tab);
 
-  // With SHIP, we'll do the final tab state update sooner than we did before.
-  if (!Services.appinfo.sessionHistoryInParent) {
-    // No tab state worth saving (that we know about yet).
-    ok(!isValueInClosedData(r), "closed tab not saved");
-  }
-
+  // No tab state worth saving (that we know about yet).
+  ok(!isValueInClosedData(r), "closed tab not saved");
   await promise;
-
-  // Turns out there is a tab state worth saving.
-  ok(isValueInClosedData(r), "closed tab saved");
 });
 
 add_task(async function save_worthy_tabs_nonremote_final() {

@@ -74,6 +74,7 @@
 #include "WindowDestroyedEvent.h"
 #include "nsDocShellLoadState.h"
 #include "mozilla/dom/WindowGlobalChild.h"
+#include "nsILoadGroup.h"
 
 // Helper Classes
 #include "nsJSUtils.h"
@@ -2491,11 +2492,10 @@ nsresult nsGlobalWindowOuter::SetNewDocument(Document* aDocument,
   }
 
   if (newInnerWindow && !newInnerWindow->mHasNotifiedGlobalCreated && mDoc) {
-    // We should probably notify. However if this is the, arguably bad,
-    // situation when we're creating a temporary non-chrome-about-blank
-    // document in a chrome docshell, don't notify just yet. Instead wait
-    // until we have a real chrome doc.
-    const bool isContentAboutBlankInChromeDocshell = [&] {
+    // We should probably notify, except if we have the initial about:blank
+    // in a chrome docshell, defer notification until the first non-initial
+    // document.
+    const bool isAboutBlankInChromeDocshell = [&] {
       if (!mDocShell) {
         return false;
       }
@@ -2505,10 +2505,10 @@ nsresult nsGlobalWindowOuter::SetNewDocument(Document* aDocument,
         return false;
       }
 
-      return !mDoc->NodePrincipal()->IsSystemPrincipal();
+      return mDoc->IsInitialDocument();
     }();
 
-    if (!isContentAboutBlankInChromeDocshell) {
+    if (!isAboutBlankInChromeDocshell) {
       newInnerWindow->mHasNotifiedGlobalCreated = true;
       nsContentUtils::AddScriptRunner(NewRunnableMethod(
           "nsGlobalWindowOuter::DispatchDOMWindowCreated", this,
@@ -5903,7 +5903,19 @@ bool nsGlobalWindowOuter::CanClose() {
   if (cv) {
     bool canClose;
     nsresult rv = cv->PermitUnload(&canClose);
-    if (NS_SUCCEEDED(rv) && !canClose) return false;
+    // PermitUnload can destroy the docshell.
+    if (!mDocShell) {
+      return true;
+    }
+    bool destroyed = false;
+    mDocShell->IsBeingDestroyed(&destroyed);
+    if (destroyed) {
+      mDocShell = nullptr;
+      return true;
+    }
+    if (NS_SUCCEEDED(rv) && !canClose) {
+      return false;
+    }
   }
 
   // If we still have to print, we delay the closing until print has happened.
@@ -6346,7 +6358,14 @@ Selection* nsGlobalWindowOuter::GetSelectionOuter() {
 
   PresShell* presShell = mDocShell->GetPresShell();
   if (!presShell) {
-    return nullptr;
+    // Force layout of the containing frame.
+    // layout/reftests/selection/modify-range.html goes
+    // through here.
+    EnsureSizeAndPositionUpToDate();
+    presShell = mDocShell->GetPresShell();
+    if (!presShell) {
+      return nullptr;
+    }
   }
   return presShell->GetCurrentSelection(SelectionType::eNormal);
 }

@@ -1151,8 +1151,10 @@ class nsPIDOMWindowOuter : public mozIDOMWindowProxy {
   void SetChromeEventHandlerInternal(
       mozilla::dom::EventTarget* aChromeEventHandler);
 
+ public:
   virtual void UpdateParentTarget() = 0;
 
+ protected:
   // These two variables are special in that they're set to the same
   // value on both the outer window and the current inner window. Make
   // sure you keep them in sync!

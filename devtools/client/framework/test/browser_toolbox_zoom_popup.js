@@ -9,7 +9,8 @@ const { Toolbox } = require("resource://devtools/client/framework/toolbox.js");
 
 // Use a simple URL in order to prevent displacing the left position of the
 // frames menu.
-const TEST_URL = "data:text/html;charset=utf-8,<iframe/>";
+const TEST_URL =
+  "data:text/html;charset=utf-8,<iframe src=data:text/html,></iframe>";
 
 add_task(async function () {
   registerCleanupFunction(async function () {

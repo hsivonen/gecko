@@ -1252,6 +1252,10 @@ class nsGlobalWindowInner final : public mozilla::dom::EventTarget,
   virtual JS::loader::ModuleLoaderBase* GetModuleLoader(
       JSContext* aCx) override;
 
+  mozilla::dom::ClientSource* GetClientSource() const {
+    return mClientSource.get();
+  }
+
  private:
   RefPtr<mozilla::dom::ContentMediaController> mContentMediaController;
 

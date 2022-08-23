@@ -2,4 +2,6 @@
 <script>
   navigator.serviceWorker.onmessage = event => parent.postMessage(event.data, '*', event.ports);
 </script>
-<iframe id='child'></iframe>
+<!-- TODO: figure out why the test fails in Gecko if this frame starts out with about:blank
+     and why it works that way in other browsers. -->
+<iframe id='child' src="data:text/html,"></iframe>

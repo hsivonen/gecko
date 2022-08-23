@@ -1401,7 +1401,7 @@ class nsHtml5RequestStopper : public Runnable {
 };
 
 nsresult nsHtml5StreamParser::OnStopRequest(nsIRequest* aRequest,
-                                            nsresult status) {
+                                            nsresult aStatus) {
   MOZ_ASSERT(mRequest == aRequest, "Got Stop on wrong stream.");
   MOZ_ASSERT(NS_IsMainThread(), "Wrong thread!");
   nsCOMPtr<nsIRunnable> stopper = new nsHtml5RequestStopper(this);

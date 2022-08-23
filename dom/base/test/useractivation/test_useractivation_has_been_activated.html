@@ -21,6 +21,10 @@ function waitForEvent(aTarget, aEvent, aCallback) {
 }
 
 let [iframe0, iframe1] = document.querySelectorAll("iframe");
+// The test expects inner window non-reuse, so let's
+// emulate the old Gecko about:blank semantics.
+iframe0.src = "about:blank";
+iframe1.src = "about:blank";
 
 function doCheck(aDocument, aName, aHasBeenUserGestureActivated) {
   is(SpecialPowers.wrap(aDocument).hasBeenUserGestureActivated,

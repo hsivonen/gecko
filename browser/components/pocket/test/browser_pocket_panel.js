@@ -32,14 +32,6 @@ add_task(async function () {
 
   let pocketFrame = pocketPanel.querySelector("browser");
 
-  const getReadyState = async frame =>
-    SpecialPowers.spawn(frame, [], () => content.document.readyState);
-
-  // Ensure Pocket panel is ready to avoid intermittency.
-  await TestUtils.waitForCondition(
-    async () => (await getReadyState(pocketFrame)) == "complete"
-  );
-
   // Ensure that the document layout has been flushed before triggering the mouse event
   // (See Bug 1519808 for a rationale).
   await pocketFrame.ownerGlobal.promiseDocumentFlushed(() => {});

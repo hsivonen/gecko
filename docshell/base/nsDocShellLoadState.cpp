@@ -941,7 +941,8 @@ void nsDocShellLoadState::AssertProcessCouldTriggerLoadIfSystem() {
 
 nsresult nsDocShellLoadState::SetupInheritingPrincipal(
     BrowsingContext::Type aType,
-    const mozilla::OriginAttributes& aOriginAttributes) {
+    const mozilla::OriginAttributes& aOriginAttributes,
+    uint32_t aSandboxFlags) {
   // We need a principalToInherit.
   //
   // If principalIsExplicit is not set there are 4 possibilities:
@@ -1008,6 +1009,11 @@ nsresult nsDocShellLoadState::SetupInheritingPrincipal(
       attrs.SetFirstPartyDomain(true, nullPrincipalURI);
     }
     mPrincipalToInherit = NullPrincipal::Create(attrs, nullPrincipalURI);
+  }
+
+  if (aSandboxFlags & SANDBOXED_ORIGIN) {
+    mPrincipalToInherit =
+        NullPrincipal::CreateWithInheritedAttributes(mPrincipalToInherit);
   }
 
   return NS_OK;

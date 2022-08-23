@@ -58,9 +58,9 @@ add_task(async function () {
       const onIframeLoaded = new Promise(resolve =>
         el.addEventListener("load", resolve, { once: true })
       );
-      content.document.body.appendChild(el);
       el.src =
         "https://example.org/document-builder.sjs?html=<h2>remote iframe</h2>";
+      content.document.body.appendChild(el);
       await onIframeLoaded;
       return el.browsingContext;
     }

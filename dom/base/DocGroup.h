@@ -38,6 +38,7 @@ class JSExecutionManager;
 class DocGroup final {
  public:
   typedef nsTArray<Document*>::iterator Iterator;
+  typedef nsTArray<Document*>::reverse_iterator ReverseIterator;
 
   NS_INLINE_DECL_CYCLE_COLLECTING_NATIVE_REFCOUNTING(DocGroup)
   NS_DECL_CYCLE_COLLECTION_NATIVE_CLASS(DocGroup)
@@ -85,6 +86,14 @@ class DocGroup final {
   Iterator end() {
     MOZ_ASSERT(NS_IsMainThread());
     return mDocuments.end();
+  }
+  ReverseIterator rbegin() {
+    MOZ_ASSERT(NS_IsMainThread());
+    return mDocuments.rbegin();
+  }
+  ReverseIterator rend() {
+    MOZ_ASSERT(NS_IsMainThread());
+    return mDocuments.rend();
   }
 
   nsresult Dispatch(TaskCategory aCategory,

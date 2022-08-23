@@ -1537,8 +1537,15 @@ already_AddRefed<RemoteBrowser> ContentParent::CreateBrowser(
 
   nsCOMPtr<nsIPrincipal> initialPrincipal =
       NullPrincipal::Create(aBrowsingContext->OriginAttributesRef());
+  RefPtr<nsOpenWindowInfo> openWindowInfo = new nsOpenWindowInfo();
+  openWindowInfo->mPrincipalToInheritForAboutBlank = initialPrincipal;
+  openWindowInfo->mPartitionedPrincipalToInheritForAboutBlank =
+      initialPrincipal;
+  // XXX since we're creating a remote browser, presumably we are at a boundary
+  // where a bunch of stuff isn't supposed to inherit into about:blank, but if
+  // something should inherit, it should probably happen right about here.
   WindowGlobalInit windowInit = WindowGlobalActor::AboutBlankInitializer(
-      aBrowsingContext, initialPrincipal);
+      aBrowsingContext, openWindowInfo);
 
   RefPtr<WindowGlobalParent> windowParent =
       WindowGlobalParent::CreateDisconnected(windowInit);
@@ -5575,6 +5582,7 @@ mozilla::ipc::IPCResult ContentParent::CommonCreateWindow(
   openInfo->mIsForWindowDotPrint = aForWindowDotPrint;
   openInfo->mNextRemoteBrowser = aNextRemoteBrowser;
   openInfo->mOriginAttributes = aOriginAttributes;
+  openInfo->mPrincipalToInheritForAboutBlank = aTriggeringPrincipal;
 
   MOZ_ASSERT_IF(aForWindowDotPrint, aForPrinting);
 

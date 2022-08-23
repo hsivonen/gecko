@@ -71,7 +71,7 @@ add_task(async function external_load() {
     "sec-fetch-user": "?1",
   };
 
-  let loaded = BrowserTestUtils.browserLoaded(gBrowser.selectedBrowser);
+  let loadedFirst = BrowserTestUtils.browserLoaded(gBrowser.selectedBrowser);
   window.browserDOMWindow.openURI(
     makeURI(`${TEST_PATH}file_dummy_link.html`),
     null,
@@ -79,7 +79,7 @@ add_task(async function external_load() {
     Ci.nsIBrowserDOMWindow.OPEN_EXTERNAL,
     Services.scriptSecurityManager.getSystemPrincipal()
   );
-  await loaded;
+  await loadedFirst;
 
   // Open a link in a *new* window through the context menu.
   gExpectedHeader = {
@@ -89,7 +89,7 @@ add_task(async function external_load() {
     "sec-fetch-user": "?1",
   };
 
-  loaded = BrowserTestUtils.waitForNewWindow({
+  let loadedSecond = BrowserTestUtils.waitForNewWindow({
     url: `${TEST_PATH}file_dummy_link_location.html`,
   });
   BrowserTestUtils.waitForEvent(document, "popupshown", false, event => {
@@ -103,7 +103,7 @@ add_task(async function external_load() {
     gBrowser.selectedBrowser
   );
 
-  let win = await loaded;
+  let win = await loadedSecond;
   win.close();
 
   // Simulate an external load in a *new* window with
@@ -115,7 +115,7 @@ add_task(async function external_load() {
     "sec-fetch-user": "?1",
   };
 
-  loaded = BrowserTestUtils.waitForNewWindow({
+  let loadedThird = BrowserTestUtils.waitForNewWindow({
     url: "https://example.com/newwindow",
   });
   window.browserDOMWindow.openURI(
@@ -125,7 +125,7 @@ add_task(async function external_load() {
     Ci.nsIBrowserDOMWindow.OPEN_EXTERNAL,
     Services.scriptSecurityManager.getSystemPrincipal()
   );
-  win = await loaded;
+  win = await loadedThird;
   win.close();
 
   // Open a *new* window through window.open without user activation.
@@ -135,7 +135,7 @@ add_task(async function external_load() {
     "sec-fetch-dest": "document",
   };
 
-  loaded = BrowserTestUtils.waitForNewWindow({
+  let loadedFourth = BrowserTestUtils.waitForNewWindow({
     url: "https://example.com/windowopen",
   });
   await SpecialPowers.spawn(gBrowser.selectedBrowser, [], () => {
@@ -145,7 +145,7 @@ add_task(async function external_load() {
       "height=500,width=500"
     );
   });
-  win = await loaded;
+  win = await loadedFourth;
   win.close();
 
   // Open a *new* window through window.open with user activation.
@@ -156,7 +156,7 @@ add_task(async function external_load() {
     "sec-fetch-user": "?1",
   };
 
-  loaded = BrowserTestUtils.waitForNewWindow({
+  let loadedFifth = BrowserTestUtils.waitForNewWindow({
     url: "https://example.com/windowopen_withactivation",
   });
   await SpecialPowers.spawn(gBrowser.selectedBrowser, [], () => {
@@ -168,7 +168,7 @@ add_task(async function external_load() {
     );
     content.document.clearUserGestureActivation();
   });
-  win = await loaded;
+  win = await loadedFifth;
   win.close();
 
   Services.obs.removeObserver(checkSecFetchUser, "http-on-stop-request");

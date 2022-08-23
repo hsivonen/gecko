@@ -408,9 +408,14 @@ bool BrowserChild::DoUpdateZoomConstraints(
 }
 
 nsresult BrowserChild::Init(mozIDOMWindowProxy* aParent,
-                            WindowGlobalChild* aInitialWindowChild) {
+                            WindowGlobalChild* aInitialWindowChild,
+                            nsIOpenWindowInfo* aOpenWindowInfo) {
+  MOZ_ASSERT(aOpenWindowInfo, "Must have openwindowinfo");
   MOZ_ASSERT_IF(aInitialWindowChild,
                 aInitialWindowChild->BrowsingContext() == mBrowsingContext);
+  MOZ_ASSERT_IF(aInitialWindowChild,
+                aInitialWindowChild->DocumentPrincipal() ==
+                    aOpenWindowInfo->GetPrincipalToInheritForAboutBlank());
 
   nsCOMPtr<nsIWidget> widget = nsIWidget::CreatePuppetWidget(this);
   mPuppetWidget = static_cast<PuppetWidget*>(widget.get());
@@ -424,7 +429,12 @@ nsresult BrowserChild::Init(mozIDOMWindowProxy* aParent,
                                   nullptr);  // HandleWidgetEvent
 
   mWebBrowser = nsWebBrowser::Create(this, mPuppetWidget, mBrowsingContext,
-                                     aInitialWindowChild);
+                                     aInitialWindowChild, aOpenWindowInfo);
+  if (!mWebBrowser) {
+    // At least the JS recursion depth check can cause an early return
+    // here. dom/base/crashtests/1419902.html
+    return NS_ERROR_FAILURE;
+  }
   nsIWebBrowser* webBrowser = mWebBrowser;
 
   mWebNav = do_QueryInterface(webBrowser);

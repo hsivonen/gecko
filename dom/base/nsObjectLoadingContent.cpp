@@ -1627,8 +1627,10 @@ bool nsObjectLoadingContent::IsAboutBlankLoadOntoInitialAboutBlank(
   return NS_IsAboutBlank(aURI) && aInheritPrincipal &&
          (!mFrameLoader || !mFrameLoader->GetExistingDocShell() ||
           mFrameLoader->GetExistingDocShell()
-              ->IsAboutBlankLoadOntoInitialAboutBlank(aURI, aInheritPrincipal,
-                                                      aPrincipalToInherit));
+              ->IsAboutBlankLoadOntoInitialAboutBlank(
+                  aURI,
+                  /* TODO: Need to get a proper value for originality! */ true,
+                  aInheritPrincipal, aPrincipalToInherit));
 }
 
 nsresult nsObjectLoadingContent::OpenChannel() {

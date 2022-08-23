@@ -48,6 +48,9 @@ function checkSecFetchUser(subject, topic, data) {
 async function testNavigations() {
   gTestCounter = 0;
 
+  info("Wait for the initial about:blank to settle");
+  await new Promise(resolve => setTimeout(resolve, 0));
+
   // Load initial site
   let loaded = BrowserTestUtils.browserLoaded(gBrowser.selectedBrowser);
   BrowserTestUtils.startLoadingURIString(gBrowser, REQUEST_URL + "?test1");

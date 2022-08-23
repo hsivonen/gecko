@@ -14,6 +14,11 @@
 SimpleTest.requestFlakyTimeout("Timeouts are needed to test transient user_activation");
 
 let timeout = SpecialPowers.getIntPref("dom.user_activation.transient.timeout") + 1000;
+let [iframe0, iframe1] = document.querySelectorAll("iframe");
+// The test expects inner window non-reuse, so let's
+// emulate the old Gecko about:blank semantics.
+iframe0.src = "about:blank";
+iframe1.src = "about:blank";
 
 function waitForEvent(aTarget, aEvent, aCallback) {
   return new Promise((aResolve) => {

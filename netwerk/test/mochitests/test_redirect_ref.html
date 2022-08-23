@@ -14,8 +14,8 @@ SimpleTest.waitForExplicitFinish();
 
 var iframe = document.createElement("iframe");
 iframe.src = "about:blank";
-iframe.addEventListener("load", finishTest);
 document.body.appendChild(iframe);
+iframe.addEventListener("load", finishTest);
 iframe.src = "redirect.sjs#start";
 
 function finishTest(e) {

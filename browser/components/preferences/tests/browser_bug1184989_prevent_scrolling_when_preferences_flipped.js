@@ -78,6 +78,7 @@ add_task(async function () {
     gBrowser,
     "about:blank"
   ));
+  await BrowserTestUtils.browserLoaded(tab.linkedBrowser);
 
   // Fake a post-crash tab
   SessionStore.setTabState(tab, JSON.stringify(TAB_STATE));

@@ -271,7 +271,8 @@ class nsDocShellLoadState final {
   // See comments in function for more info on principal selection algorithm
   nsresult SetupInheritingPrincipal(
       mozilla::dom::BrowsingContext::Type aType,
-      const mozilla::OriginAttributes& aOriginAttributes);
+      const mozilla::OriginAttributes& aOriginAttributes,
+      uint32_t aSandboxFlags);
 
   // If no triggering principal exists at the moment, create one using referrer
   // information and origin attributes.

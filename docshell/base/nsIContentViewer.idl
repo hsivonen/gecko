@@ -88,6 +88,8 @@ interface nsIContentViewer : nsISupports
   /**
    * Overload PermitUnload method for C++ consumers with no aPermitUnloadFlags
    * argument.
+   *
+   * ATTENTION: This call may destroy the docshell that owns this viewer.
    */
   %{C++
     nsresult PermitUnload(bool* canUnload) {
@@ -99,6 +101,8 @@ interface nsIContentViewer : nsISupports
    * Checks if the document wants to prevent unloading by firing beforeunload on
    * the document.
    * The result is returned.
+   *
+   * ATTENTION: This call may destroy the docshell that owns this viewer.
    */
   boolean permitUnload([optional] in nsIContentViewer_PermitUnloadAction aAction);
 

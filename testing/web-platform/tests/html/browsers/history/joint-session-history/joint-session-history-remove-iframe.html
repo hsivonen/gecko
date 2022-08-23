@@ -12,10 +12,15 @@ async_test(function(t) {
         var child = document.getElementById("frame");
         var old_history_len = history.length;
         child.onload = () => {
-            assert_equals(old_history_len + 1, history.length);
-            document.body.removeChild(document.getElementById("frame"));
-            assert_equals(old_history_len, history.length);
-            t.done();
+            try {
+                t.step(() => {
+                    assert_equals(old_history_len, history.length);
+                    document.body.removeChild(document.getElementById("frame"));
+                    assert_equals(old_history_len, history.length);
+                });
+            } finally {
+                t.done();
+            }
         }
         child.src = "joint-session-history-filler.html";
     }, 1000);

@@ -9,6 +9,10 @@
 #endif
 
 #include "BrowserChild.h"
+
+// Hack: nsIOpenWindowInfo depends on this without being able to include it
+#include "mozilla/dom/BrowserParent.h"
+
 #include "nsNSSComponent.h"
 #include "ContentChild.h"
 #include "GeckoProfiler.h"
@@ -133,6 +137,7 @@
 #include "nsQueryObject.h"
 #include "nsSandboxFlags.h"
 #include "mozmemory.h"
+#include "nsOpenWindowInfo.h"
 
 #include "ChildProfilerController.h"
 
@@ -968,6 +973,8 @@ nsresult ContentChild::ProvideWindowCommon(
     bool aForceNoReferrer, bool aIsPopupRequested,
     nsDocShellLoadState* aLoadState, bool* aWindowIsNew,
     BrowsingContext** aReturn) {
+  MOZ_ASSERT(aOpenWindowInfo, "Must have openwindowinfo");
+
   *aReturn = nullptr;
 
   nsAutoCString features(aFeatures);
@@ -1067,18 +1074,12 @@ nsresult ContentChild::ProvideWindowCommon(
 
   browsingContext->EnsureAttached();
 
-  // The initial about:blank document we generate within the nsDocShell will
-  // almost certainly be replaced at some point. Unfortunately, getting the
-  // principal right here causes bugs due to frame scripts not getting events
-  // they expect, due to the real initial about:blank not being created yet.
-  //
-  // For this reason, we intentionally mispredict the initial principal here, so
-  // that we can act the same as we did before when not predicting a result
-  // principal. This `PWindowGlobal` will almost immediately be destroyed.
-  nsCOMPtr<nsIPrincipal> initialPrincipal =
-      NullPrincipal::Create(browsingContext->OriginAttributesRef());
+  // This aOpenWindowInfo will also be used to create the initial about:blank
+  // document, so the principal, etc., will match what's set here.
+  MOZ_ASSERT(aOpenWindowInfo->GetPrincipalToInheritForAboutBlank(),
+             "How come we don't have a principal?");
   WindowGlobalInit windowInit = WindowGlobalActor::AboutBlankInitializer(
-      browsingContext, initialPrincipal);
+      browsingContext, aOpenWindowInfo);
 
   RefPtr<WindowGlobalChild> windowChild =
       WindowGlobalChild::CreateDisconnected(windowInit);
@@ -1128,7 +1129,8 @@ nsresult ContentChild::ProvideWindowCommon(
   // tell that NotNull<RefPtr<BrowserChild>> is a strong pointer.
   RefPtr<nsPIDOMWindowOuter> parentWindow =
       parent ? parent->GetDOMWindow() : nullptr;
-  if (NS_FAILED(MOZ_KnownLive(newChild)->Init(parentWindow, windowChild))) {
+  if (NS_FAILED(MOZ_KnownLive(newChild)->Init(parentWindow, windowChild,
+                                              aOpenWindowInfo))) {
     return NS_ERROR_ABORT;
   }
 
@@ -1853,8 +1855,11 @@ mozilla::ipc::IPCResult ContentChild::RecvConstructBrowser(
   MOZ_RELEASE_ASSERT(browserChild->mBrowsingContext->Id() ==
                      aWindowInit.context().mBrowsingContextId);
 
-  if (NS_WARN_IF(
-          NS_FAILED(browserChild->Init(/* aOpener */ nullptr, windowChild)))) {
+  RefPtr<nsOpenWindowInfo> openWindowInfo = new nsOpenWindowInfo();
+  openWindowInfo->mPrincipalToInheritForAboutBlank = aWindowInit.principal();
+
+  if (NS_WARN_IF(NS_FAILED(browserChild->Init(/* aOpener */ nullptr,
+                                              windowChild, openWindowInfo)))) {
     return IPC_FAIL(browserChild, "BrowserChild::Init failed");
   }
 

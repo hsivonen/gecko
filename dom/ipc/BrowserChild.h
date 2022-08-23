@@ -52,6 +52,7 @@ class nsISerialEventTarget;
 class nsIWebProgress;
 class nsWebBrowser;
 class nsDocShellLoadState;
+class nsIOpenWindowInfo;
 
 template <typename T>
 class nsTHashtable;
@@ -179,7 +180,8 @@ class BrowserChild final : public nsMessageManagerScriptExecutor,
                bool aIsTopLevel);
 
   MOZ_CAN_RUN_SCRIPT nsresult Init(mozIDOMWindowProxy* aParent,
-                                   WindowGlobalChild* aInitialWindowChild);
+                                   WindowGlobalChild* aInitialWindowChild,
+                                   nsIOpenWindowInfo* aOpenWindowInfo);
 
   /** Return a BrowserChild with the given attributes. */
   static already_AddRefed<BrowserChild> Create(

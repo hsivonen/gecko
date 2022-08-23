@@ -83,7 +83,13 @@ enum eParserMode {
   /**
    * Load as data (XHR)
    */
-  LOAD_AS_DATA
+  LOAD_AS_DATA,
+
+  /**
+   * Parse (non-initial) about:blank for normal viewing (not View Source or
+   * data).
+   */
+  ABOUT_BLANK,
 };
 
 enum eBomState {
@@ -206,7 +212,7 @@ class nsHtml5StreamParser final : public nsISupports {
   nsresult OnDataAvailable(nsIRequest* aRequest, nsIInputStream* aInStream,
                            uint64_t aSourceOffset, uint32_t aLength);
 
-  nsresult OnStopRequest(nsIRequest* aRequest, nsresult status);
+  nsresult OnStopRequest(nsIRequest* aRequest, nsresult aStatus);
 
   // EncodingDeclarationHandler
   // https://hg.mozilla.org/projects/htmlparser/file/tip/src/nu/validator/htmlparser/common/EncodingDeclarationHandler.java

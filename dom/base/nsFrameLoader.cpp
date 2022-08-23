@@ -132,6 +132,8 @@
 
 #include "nsXULPopupManager.h"
 
+#include "nsOpenWindowInfo.h"
+
 #ifdef NS_PRINTING
 #  include "nsIWebBrowserPrint.h"
 #endif
@@ -195,7 +197,8 @@ nsFrameLoader::nsFrameLoader(Element* aOwner, BrowsingContext* aBrowsingContext,
       mIsRemoteFrame(aIsRemoteFrame),
       mWillChangeProcess(false),
       mObservingOwnerContent(false),
-      mTabProcessCrashFired(false) {
+      mTabProcessCrashFired(false),
+      mSetFirstLoad(false) {
   nsCOMPtr<nsFrameLoaderOwner> owner = do_QueryInterface(aOwner);
   owner->AttachFrameLoader(this);
 }
@@ -284,8 +287,9 @@ static bool IsTopContent(BrowsingContext* aParent, Element* aOwner) {
 static already_AddRefed<BrowsingContext> CreateBrowsingContext(
     Element* aOwner, nsIOpenWindowInfo* aOpenWindowInfo,
     BrowsingContextGroup* aSpecificGroup, bool aNetworkCreated = false) {
-  MOZ_ASSERT(!aOpenWindowInfo || !aSpecificGroup,
-             "Only one of SpecificGroup and OpenWindowInfo may be provided!");
+  // MOZ_ASSERT(!aOpenWindowInfo || !aSpecificGroup,
+  //            "Only one of SpecificGroup and OpenWindowInfo may be
+  //            provided!");
 
   // If we've got a pending BrowserParent from the content process, use the
   // BrowsingContext which was created for it.
@@ -345,8 +349,8 @@ static already_AddRefed<BrowsingContext> CreateBrowsingContext(
         BrowsingContext::Type::Content, false);
   }
 
-  MOZ_ASSERT(!aOpenWindowInfo,
-             "Can't have openWindowInfo for non-toplevel context");
+  // MOZ_ASSERT(!aOpenWindowInfo,
+  //            "Can't have openWindowInfo for non-toplevel context");
 
   MOZ_ASSERT(!aSpecificGroup,
              "Can't force BrowsingContextGroup for non-toplevel context");
@@ -436,7 +440,7 @@ already_AddRefed<nsFrameLoader> nsFrameLoader::Create(
   NS_ENSURE_TRUE(context, nullptr);
 
   if (XRE_IsParentProcess() && aOpenWindowInfo) {
-    MOZ_ASSERT(context->IsTopContent());
+    // MOZ_ASSERT(context->IsTopContent());
     if (RefPtr<BrowsingContext> crossGroupOpener =
             aOpenWindowInfo->GetParent()) {
       context->Canonical()->SetCrossGroupOpenerId(crossGroupOpener->Id());
@@ -655,6 +659,9 @@ nsresult nsFrameLoader::ReallyStartLoadingInternal() {
                   mOwnerContent->IsInComposedDoc());
 
   AUTO_PROFILER_LABEL("nsFrameLoader::ReallyStartLoadingInternal", OTHER);
+  bool doNotInheritPrincipalIntoAboutBlank = false;
+  bool setFirstLoad = mSetFirstLoad;
+  mSetFirstLoad = false;
   RefPtr<nsDocShellLoadState> loadState;
   if (!mPendingSwitchID) {
     loadState = new nsDocShellLoadState(mURIToLoad);
@@ -704,6 +711,9 @@ nsresult nsFrameLoader::ReallyStartLoadingInternal() {
       flags = nsIWebNavigation::LOAD_FLAGS_ALLOW_THIRD_PARTY_FIXUP |
               nsIWebNavigation::LOAD_FLAGS_DISALLOW_INHERIT_PRINCIPAL;
     }
+    if (setFirstLoad) {
+      flags |= nsIWebNavigation::LOAD_FLAGS_FIRST_LOAD;
+    }
     loadState->SetLoadFlags(flags);
 
     loadState->SetFirstParty(false);
@@ -716,6 +726,7 @@ nsresult nsFrameLoader::ReallyStartLoadingInternal() {
         NS_IsAboutBlank(mURIToLoad) &&
         loadState->TriggeringPrincipal()->IsSystemPrincipal()) {
       loadState->SetRemoteTypeOverride(mRemoteType);
+      // doNotInheritPrincipalIntoAboutBlank = true;
     }
   }
 
@@ -740,7 +751,7 @@ nsresult nsFrameLoader::ReallyStartLoadingInternal() {
     return NS_OK;
   }
 
-  nsresult rv = MaybeCreateDocShell();
+  nsresult rv = MaybeCreateDocShell(doNotInheritPrincipalIntoAboutBlank);
   if (NS_FAILED(rv)) {
     return rv;
   }
@@ -967,6 +978,9 @@ bool nsFrameLoader::Show(nsSubDocumentFrame* frame) {
     return ShowRemoteFrame(size, frame);
   }
 
+  // XXX We may already have a docshell. Rearrange this method to more clearly
+  // indicate that that may be the case.
+
   nsresult rv = MaybeCreateDocShell();
   if (NS_FAILED(rv)) {
     return false;
@@ -995,8 +1009,9 @@ bool nsFrameLoader::Show(nsSubDocumentFrame* frame) {
   if (!view) return false;
 
   RefPtr<nsDocShell> baseWindow = GetDocShell();
+  MOZ_ASSERT(ds == baseWindow, "How did the docshell change?");
   baseWindow->InitWindow(nullptr, view->GetWidget(), 0, 0, size.width,
-                         size.height);
+                         size.height, nullptr, nullptr);
   baseWindow->SetVisibility(true);
   NS_ENSURE_TRUE(GetDocShell(), false);
 
@@ -1010,6 +1025,8 @@ bool nsFrameLoader::Show(nsSubDocumentFrame* frame) {
         doc && doc->IsHTMLOrXHTML() ? doc->AsHTMLDocument() : nullptr;
 
     if (htmlDoc) {
+      // MOZ_ASSERT(htmlDoc->IsInitialDocument(),
+      //            "How come this isn't the initial document?");
       nsAutoString designMode;
       htmlDoc->GetDesignMode(designMode);
 
@@ -1946,7 +1963,7 @@ void nsFrameLoader::StartDestroy(bool aForProcessSwitch) {
 
   nsCOMPtr<nsIRunnable> destroyRunnable =
       new nsFrameLoaderDestroyRunnable(this);
-  if (mNeedsAsyncDestroy || !doc ||
+  if (/*mNeedsAsyncDestroy ||*/ !doc ||
       NS_FAILED(doc->FinalizeFrameLoader(this, destroyRunnable))) {
     NS_DispatchToCurrentThread(destroyRunnable);
   }
@@ -2153,7 +2170,8 @@ void nsFrameLoader::AssertSafeToInit() {
                         "document update or reflow!");
 }
 
-nsresult nsFrameLoader::MaybeCreateDocShell() {
+nsresult nsFrameLoader::MaybeCreateDocShell(
+    bool doNotInheritPrincipalIntoAboutBlank) {
   if (GetDocShell()) {
     return NS_OK;
   }
@@ -2275,12 +2293,6 @@ nsresult nsFrameLoader::MaybeCreateDocShell() {
     nsGlobalWindowOuter::Cast(newWindow)->AllowScriptsToClose();
   }
 
-  if (!docShell->Initialize()) {
-    // Do not call Destroy() here. See bug 472312.
-    NS_WARNING("Something wrong when creating the docshell for a frameloader!");
-    return NS_ERROR_FAILURE;
-  }
-
   NS_ENSURE_STATE(mOwnerContent);
 
   // If we are an in-process browser, we want to set up our session history.
@@ -2303,6 +2315,41 @@ nsresult nsFrameLoader::MaybeCreateDocShell() {
   MOZ_ALWAYS_SUCCEEDS(mPendingBrowsingContext->SetInitialSandboxFlags(
       mPendingBrowsingContext->GetSandboxFlags()));
 
+  // Gather things to inherit into the initial about:blank
+  RefPtr<nsOpenWindowInfo> openWindowInfo;
+  if (doNotInheritPrincipalIntoAboutBlank) {
+    openWindowInfo = new nsOpenWindowInfo();
+    openWindowInfo->mPrincipalToInheritForAboutBlank = NullPrincipal::Create(
+        mPendingBrowsingContext->OriginAttributesRef(), nullptr);
+  } else if (!mOpenWindowInfo) {
+    // XUL has mOpenWindowInfo. For HTML [i]frames and objects, perform
+    // the inheritance here. (It would probably be more proper to hoist
+    // this to each call site of nsFrameLoader::Create.)
+    nsCOMPtr<nsIPrincipal> principal = doc->NodePrincipal();
+    nsCOMPtr<nsIPrincipal> partitionedPrincipal = doc->PartitionedPrincipal();
+    if (XRE_IsContentProcess() &&
+        (!principal || principal->IsSystemPrincipal())) {
+      // Never inherit system principal to HTML [i]frame in a content process.
+      principal = NullPrincipal::CreateWithoutOriginAttributes();
+      partitionedPrincipal = principal;
+    }
+
+    openWindowInfo = new nsOpenWindowInfo();
+    openWindowInfo->mPrincipalToInheritForAboutBlank = principal.forget();
+    openWindowInfo->mPartitionedPrincipalToInheritForAboutBlank =
+        partitionedPrincipal.forget();
+    openWindowInfo->mCspToInheritForAboutBlank = doc->GetCsp();
+    openWindowInfo->mCoepToInheritForAboutBlank = doc->GetEmbedderPolicy();
+    openWindowInfo->mBaseUriToInheritForAboutBlank =
+        mOwnerContent->GetBaseURI();
+  }
+  if (!docShell->Initialize(openWindowInfo ? openWindowInfo : mOpenWindowInfo,
+                            nullptr)) {
+    // Do not call Destroy() here. See bug 472312.
+    NS_WARNING("Something wrong when creating the docshell for a frameloader!");
+    return NS_ERROR_FAILURE;
+  }
+
   if (OwnerIsMozBrowserFrame()) {
     // For inproc frames, set the docshell properties.
     nsAutoString name;
@@ -2312,20 +2359,20 @@ nsresult nsFrameLoader::MaybeCreateDocShell() {
   }
 
   ReallyLoadFrameScripts();
-  InitializeBrowserAPI();
 
-  // Previously we would forcibly create the initial about:blank document for
-  // in-process content frames from a frame script which eagerly loaded in
-  // every tab.  This lead to other frontend components growing dependencies on
-  // the initial about:blank document being created eagerly.  See bug 1471327
-  // for details.
-  //
-  // We also eagerly create the initial about:blank document for remote loads
-  // separately when initializing BrowserChild.
-  if (mIsTopLevelContent &&
-      mPendingBrowsingContext->GetMessageManagerGroup() == u"browsers"_ns) {
-    Unused << mDocShell->GetDocument();
+  // Previously, the lazy about:blank creation had the effect of running
+  // nsGlobalWindowOuter::DispatchDOMWindowCreated, which sets up the message
+  // manager, after ReallyLoadFrameScripts(). We can't achieve the same by using
+  // a script blocker while calling `docShell->Initialize()`, because the
+  // initialization expects to be able to assert that scripts are allowed to
+  // run. Therefore, let's fix up the message manager setup here.
+  if (Document* doc = docShell->GetDocument()) {
+    if (nsPIDOMWindowOuter* window = doc->GetWindow()) {
+      window->UpdateParentTarget();
+    }
   }
+
+  InitializeBrowserAPI();
 
   return NS_OK;
 }
