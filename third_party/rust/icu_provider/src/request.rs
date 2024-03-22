@@ -11,7 +11,7 @@ use core::hash::Hash;
 use core::str::FromStr;
 use icu_locid::extensions::unicode as unicode_ext;
 use icu_locid::subtags::{Language, Region, Script, Variants};
-use icu_locid::{LanguageIdentifier, Locale, SubtagOrderingResult};
+use icu_locid::{LanguageIdentifier, Locale};
 use writeable::{LengthHint, Writeable};
 
 #[cfg(feature = "experimental")]
@@ -258,7 +258,6 @@ impl DataLocale {
     /// # Examples
     ///
     /// ```
-    /// use icu_locid::Locale;
     /// use icu_provider::DataLocale;
     /// use std::cmp::Ordering;
     ///
@@ -342,34 +341,7 @@ impl DataLocale {
     /// }
     /// ```
     pub fn strict_cmp(&self, other: &[u8]) -> Ordering {
-        let subtags = other.split(|b| *b == b'-');
-        let mut subtag_result = self.langid.strict_cmp_iter(subtags);
-        if self.has_unicode_ext() {
-            let mut subtags = match subtag_result {
-                SubtagOrderingResult::Subtags(s) => s,
-                SubtagOrderingResult::Ordering(o) => return o,
-            };
-            match subtags.next() {
-                Some(b"u") => (),
-                Some(s) => return s.cmp(b"u").reverse(),
-                None => return Ordering::Greater,
-            }
-            subtag_result = self.keywords.strict_cmp_iter(subtags);
-        }
-        #[cfg(feature = "experimental")]
-        if let Some(aux) = self.get_aux() {
-            let mut subtags = match subtag_result {
-                SubtagOrderingResult::Subtags(s) => s,
-                SubtagOrderingResult::Ordering(o) => return o,
-            };
-            match subtags.next() {
-                Some(b"x") => (),
-                Some(s) => return s.cmp(b"x").reverse(),
-                None => return Ordering::Greater,
-            }
-            subtag_result = aux.strict_cmp_iter(subtags);
-        }
-        subtag_result.end()
+        self.write_cmp_bytes(other)
     }
 }
 
@@ -396,6 +368,24 @@ impl DataLocale {
     /// ```
     pub fn is_empty(&self) -> bool {
         self == <&DataLocale>::default()
+    }
+
+    /// Returns an ordering suitable for use in [`BTreeSet`].
+    ///
+    /// The ordering may or may not be equivalent to string ordering, and it
+    /// may or may not be stable across ICU4X releases.
+    ///
+    /// [`BTreeSet`]: alloc::collections::BTreeSet
+    pub fn total_cmp(&self, other: &Self) -> Ordering {
+        self.langid
+            .total_cmp(&other.langid)
+            .then_with(|| self.keywords.cmp(&other.keywords))
+            .then_with(|| {
+                #[cfg(feature = "experimental")]
+                return self.aux.cmp(&other.aux);
+                #[cfg(not(feature = "experimental"))]
+                return Ordering::Equal;
+            })
     }
 
     /// Returns whether this [`DataLocale`] is `und` in the locale and extensions portion.
@@ -500,7 +490,6 @@ impl DataLocale {
     /// use icu_locid::{
     ///     langid, locale,
     ///     subtags::{language, region},
-    ///     Locale,
     /// };
     /// use icu_provider::prelude::*;
     ///
@@ -757,7 +746,6 @@ impl DataLocale {
 /// Multiple auxiliary keys are allowed:
 ///
 /// ```
-/// use icu_locid::locale;
 /// use icu_provider::prelude::*;
 /// use writeable::assert_writeable_eq;
 ///
@@ -782,7 +770,7 @@ impl DataLocale {
 /// ```
 ///
 /// [`Keywords`]: unicode_ext::Keywords
-#[derive(Debug, PartialEq, Clone, Eq, Hash)]
+#[derive(Debug, PartialEq, Clone, Eq, Hash, PartialOrd, Ord)]
 #[cfg(feature = "experimental")]
 pub struct AuxiliaryKeys {
     value: AuxiliaryKeysInner,
@@ -819,6 +807,20 @@ impl PartialEq for AuxiliaryKeysInner {
 
 #[cfg(feature = "experimental")]
 impl Eq for AuxiliaryKeysInner {}
+
+#[cfg(feature = "experimental")]
+impl PartialOrd for AuxiliaryKeysInner {
+    fn partial_cmp(&self, other: &Self) -> Option<Ordering> {
+        Some(self.cmp(other))
+    }
+}
+
+#[cfg(feature = "experimental")]
+impl Ord for AuxiliaryKeysInner {
+    fn cmp(&self, other: &Self) -> Ordering {
+        self.deref().cmp(other.deref())
+    }
+}
 
 #[cfg(feature = "experimental")]
 impl Debug for AuxiliaryKeysInner {
@@ -985,23 +987,6 @@ impl AuxiliaryKeys {
                     None
                 }
             })
-    }
-
-    pub(crate) fn strict_cmp_iter<'l, I>(&self, mut subtags: I) -> SubtagOrderingResult<I>
-    where
-        I: Iterator<Item = &'l [u8]>,
-    {
-        for subtag in self.value.split(Self::separator()) {
-            if let Some(other) = subtags.next() {
-                match subtag.as_bytes().cmp(other) {
-                    Ordering::Equal => (),
-                    not_equal => return SubtagOrderingResult::Ordering(not_equal),
-                }
-            } else {
-                return SubtagOrderingResult::Ordering(Ordering::Greater);
-            }
-        }
-        SubtagOrderingResult::Subtags(subtags)
     }
 
     /// Returns the internal separator byte used for auxiliary keys in data locales.

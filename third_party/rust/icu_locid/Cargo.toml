@@ -29,7 +29,7 @@ description = "API for managing Unicode Language and Locale Identifiers"
 homepage = "https://icu4x.unicode.org"
 readme = "README.md"
 categories = ["internationalization"]
-license-file = "LICENSE"
+license = "Unicode-3.0"
 repository = "https://github.com/unicode-org/icu4x"
 
 [package.metadata.cargo-all-features]
@@ -69,6 +69,7 @@ required-features = ["bench"]
 
 [dependencies.databake]
 version = "0.1.7"
+path = "../../utils/databake"
 features = ["derive"]
 optional = true
 default-features = false
@@ -79,6 +80,7 @@ default-features = false
 
 [dependencies.litemap]
 version = "0.7.2"
+path = "../../utils/litemap"
 features = ["alloc"]
 default-features = false
 
@@ -93,20 +95,35 @@ default-features = false
 
 [dependencies.tinystr]
 version = "0.7.4"
+path = "../../utils/tinystr"
 features = ["alloc"]
 default-features = false
 
 [dependencies.writeable]
 version = "0.5.4"
+path = "../../utils/writeable"
 default-features = false
 
 [dependencies.zerovec]
 version = "0.10.1"
+path = "../../utils/zerovec"
 optional = true
 default-features = false
 
-[dev-dependencies.iai]
-version = "0.1.1"
+[dev-dependencies]
+iai = "0.1.1"
+serde_json = "1.0"
+
+[dev-dependencies.icu]
+path = "../../components/icu"
+default-features = false
+
+[dev-dependencies.icu_benchmark_macros]
+path = "../../tools/benchmark/macros"
+
+[dev-dependencies.litemap]
+path = "../../utils/litemap"
+features = ["testing"]
 
 [dev-dependencies.postcard]
 version = "1.0.0"
@@ -116,9 +133,6 @@ default-features = false
 [dev-dependencies.serde]
 version = "1.0"
 features = ["derive"]
-
-[dev-dependencies.serde_json]
-version = "1.0"
 
 [features]
 bench = ["serde"]
@@ -130,5 +144,5 @@ serde = [
 std = []
 zerovec = ["dep:zerovec"]
 
-[target."cfg(not(target_arch = \"wasm32\"))".dev-dependencies.criterion]
-version = "0.4"
+[target."cfg(not(target_arch = \"wasm32\"))".dev-dependencies]
+criterion = "0.4"

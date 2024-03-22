@@ -29,7 +29,7 @@ description = "API for Unicode Language and Locale Identifiers canonicalization"
 homepage = "https://icu4x.unicode.org"
 readme = "README.md"
 categories = ["internationalization"]
-license-file = "LICENSE"
+license = "Unicode-3.0"
 repository = "https://github.com/unicode-org/icu4x"
 
 [package.metadata.cargo-all-features]
@@ -52,6 +52,7 @@ harness = false
 
 [dependencies.databake]
 version = "0.1.7"
+path = "../../utils/databake"
 features = ["derive"]
 optional = true
 default-features = false
@@ -62,16 +63,19 @@ default-features = false
 
 [dependencies.icu_locid]
 version = "~1.4.0"
+path = "../locid"
 features = ["zerovec"]
 default-features = false
 
 [dependencies.icu_locid_transform_data]
 version = "~1.4.0"
+path = "../../provider/baked/locid_transform"
 optional = true
 default-features = false
 
 [dependencies.icu_provider]
 version = "~1.4.0"
+path = "../../provider/core"
 features = ["macros"]
 default-features = false
 
@@ -86,6 +90,7 @@ default-features = false
 
 [dependencies.tinystr]
 version = "0.7.4"
+path = "../../utils/tinystr"
 features = [
     "alloc",
     "zerovec",
@@ -94,15 +99,23 @@ default-features = false
 
 [dependencies.zerovec]
 version = "0.10.1"
+path = "../../utils/zerovec"
 features = ["yoke"]
+default-features = false
+
+[dev-dependencies]
+serde_json = "1.0"
+
+[dev-dependencies.icu]
+path = "../../components/icu"
 default-features = false
 
 [dev-dependencies.serde]
 version = "1.0"
 features = ["derive"]
 
-[dev-dependencies.serde_json]
-version = "1.0"
+[dev-dependencies.writeable]
+path = "../../utils/writeable"
 
 [features]
 bench = ["serde"]
@@ -124,5 +137,5 @@ serde = [
 ]
 std = []
 
-[target."cfg(not(target_arch = \"wasm32\"))".dev-dependencies.criterion]
-version = "0.4"
+[target."cfg(not(target_arch = \"wasm32\"))".dev-dependencies]
+criterion = "0.4"

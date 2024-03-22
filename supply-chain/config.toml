@@ -19,6 +19,167 @@ url = "https://raw.githubusercontent.com/divviup/libprio-rs/main/supply-chain/au
 [imports.mozilla]
 url = "https://raw.githubusercontent.com/mozilla/supply-chain/main/audits.toml"
 
+[[exemptions.form_urlencoded]]
+version = "1.2.1"
+criteria = "safe-to-deploy"
+
+[[exemptions.icu_collections]]
+version = "1.4.0"
+criteria = "safe-to-deploy"
+
+[[exemptions.icu_locid]]
+version = "1.4.0"
+criteria = "safe-to-deploy"
+
+[[exemptions.icu_locid_transform]]
+version = "1.4.0"
+criteria = "safe-to-deploy"
+
+[[exemptions.icu_locid_transform_data]]
+version = "1.4.0"
+criteria = "safe-to-deploy"
+
+[[exemptions.icu_normalizer]]
+version = "1.4.1"
+criteria = "safe-to-deploy"
+
+[[exemptions.icu_normalizer_data]]
+version = "1.4.0"
+criteria = "safe-to-deploy"
+
+[[exemptions.icu_properties]]
+version = "1.4.0"
+criteria = "safe-to-deploy"
+
+[[exemptions.icu_properties_data]]
+version = "1.4.0"
+criteria = "safe-to-deploy"
+
+[[exemptions.icu_provider]]
+version = "1.4.0"
+criteria = "safe-to-deploy"
+
+[[exemptions.icu_provider_macros]]
+version = "1.4.0"
+criteria = "safe-to-deploy"
+
+[[exemptions.idna]]
+version = "0.5.0"
+criteria = "safe-to-deploy"
+
+[[exemptions.litemap]]
+version = "0.7.2"
+criteria = "safe-to-deploy"
+
+[[exemptions.percent-encoding]]
+version = "2.3.1"
+criteria = "safe-to-deploy"
+
+[[exemptions.tinystr]]
+version = "0.7.5"
+criteria = "safe-to-deploy"
+
+[[exemptions.url]]
+version = "2.5.0"
+criteria = "safe-to-deploy"
+
+[[exemptions.writeable]]
+version = "0.5.4"
+criteria = "safe-to-deploy"
+
+[[exemptions.yoke]]
+version = "0.7.3"
+criteria = "safe-to-deploy"
+
+[[exemptions.yoke-derive]]
+version = "0.7.3"
+criteria = "safe-to-deploy"
+
+[[exemptions.zerofrom]]
+version = "0.1.3"
+criteria = "safe-to-deploy"
+
+[[exemptions.zerofrom-derive]]
+version = "0.1.3"
+criteria = "safe-to-deploy"
+
+[[exemptions.zerovec]]
+version = "0.10.1"
+criteria = "safe-to-deploy"
+
+[[exemptions.zerovec-derive]]
+version = "0.10.1"
+criteria = "safe-to-deploy"
+
+[policy.form_urlencoded]
+audit-as-crates-io = true
+
+[policy.icu_collections]
+audit-as-crates-io = true
+
+[policy.icu_locid]
+audit-as-crates-io = true
+
+[policy.icu_locid_transform]
+audit-as-crates-io = true
+
+[policy.icu_locid_transform_data]
+audit-as-crates-io = true
+
+[policy.icu_normalizer]
+audit-as-crates-io = true
+
+[policy.icu_normalizer_data]
+audit-as-crates-io = true
+
+[policy.icu_properties]
+audit-as-crates-io = true
+
+[policy.icu_properties_data]
+audit-as-crates-io = true
+
+[policy.icu_provider]
+audit-as-crates-io = true
+
+[policy.icu_provider_macros]
+audit-as-crates-io = true
+
+[policy.idna]
+audit-as-crates-io = true
+
+[policy.litemap]
+audit-as-crates-io = true
+
+[policy.percent-encoding]
+audit-as-crates-io = true
+
+[policy.tinystr]
+audit-as-crates-io = true
+
+[policy.url]
+audit-as-crates-io = true
+
+[policy.writeable]
+audit-as-crates-io = true
+
+[policy.yoke]
+audit-as-crates-io = true
+
+[policy.yoke-derive]
+audit-as-crates-io = true
+
+[policy.zerofrom]
+audit-as-crates-io = true
+
+[policy.zerofrom-derive]
+audit-as-crates-io = true
+
+[policy.zerovec]
+audit-as-crates-io = true
+
+[policy.zerovec-derive]
+audit-as-crates-io = true
+
 [policy.autocfg]
 audit-as-crates-io = true
 notes = "This is the upstream code plus a few local fixes, see bug 1685697."

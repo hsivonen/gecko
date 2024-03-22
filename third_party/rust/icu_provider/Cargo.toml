@@ -29,7 +29,7 @@ description = "Trait and struct definitions for the ICU data provider"
 homepage = "https://icu4x.unicode.org"
 readme = "README.md"
 categories = ["internationalization"]
-license-file = "LICENSE"
+license = "Unicode-3.0"
 repository = "https://github.com/unicode-org/icu4x"
 
 [package.metadata.cargo-all-features]
@@ -39,12 +39,20 @@ max_combination_size = 3
 [package.metadata.docs.rs]
 all-features = true
 
+[lib]
+bench = false
+
+[[bench]]
+name = "data_locale_bench"
+harness = false
+
 [dependencies.bincode]
 version = "1.3"
 optional = true
 
 [dependencies.databake]
 version = "0.1.7"
+path = "../../utils/databake"
 features = ["derive"]
 optional = true
 default-features = false
@@ -61,10 +69,12 @@ default-features = false
 
 [dependencies.icu_locid]
 version = "~1.4.0"
+path = "../../components/locid"
 default-features = false
 
 [dependencies.icu_provider_macros]
 version = "~1.4.0"
+path = "macros"
 optional = true
 default-features = false
 
@@ -98,14 +108,17 @@ default-features = false
 
 [dependencies.tinystr]
 version = "0.7.4"
+path = "../../utils/tinystr"
 default-features = false
 
 [dependencies.writeable]
 version = "0.5.4"
+path = "../../utils/writeable"
 default-features = false
 
 [dependencies.yoke]
 version = "0.7.3"
+path = "../../utils/yoke"
 features = [
     "alloc",
     "derive",
@@ -114,6 +127,7 @@ default-features = false
 
 [dependencies.zerofrom]
 version = "0.1.2"
+path = "../../utils/zerofrom"
 features = [
     "alloc",
     "derive",
@@ -122,13 +136,21 @@ default-features = false
 
 [dependencies.zerovec]
 version = "0.10.1"
+path = "../../utils/zerovec"
 features = ["derive"]
 default-features = false
 
-[dev-dependencies.serde_json]
-version = "1.0"
+[dev-dependencies]
+serde_json = "1.0"
+
+[dev-dependencies.icu_locid_transform]
+path = "../../components/locid_transform"
+
+[dev-dependencies.icu_provider_adapters]
+path = "../adapters"
 
 [features]
+bench = []
 datagen = [
     "serde",
     "dep:erased-serde",
@@ -159,3 +181,6 @@ serde = [
 ]
 std = ["icu_locid/std"]
 sync = []
+
+[target."cfg(not(target_arch = \"wasm32\"))".dev-dependencies]
+criterion = "0.4"

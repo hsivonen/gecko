@@ -27,7 +27,7 @@ include = [
 ]
 description = "A more efficient alternative to fmt::Display"
 readme = "README.md"
-license-file = "LICENSE"
+license = "Unicode-3.0"
 repository = "https://github.com/unicode-org/icu4x"
 
 [package.metadata.cargo-all-features]
@@ -46,6 +46,9 @@ bench = false
 name = "writeable"
 harness = false
 
+[dev-dependencies.icu_benchmark_macros]
+path = "../../tools/benchmark/macros"
+
 [dev-dependencies.rand]
 version = "0.8"
 features = ["small_rng"]
@@ -53,5 +56,5 @@ features = ["small_rng"]
 [features]
 bench = []
 
-[target."cfg(not(target_arch = \"wasm32\"))".dev-dependencies.criterion]
-version = "0.4"
+[target."cfg(not(target_arch = \"wasm32\"))".dev-dependencies]
+criterion = "0.4"

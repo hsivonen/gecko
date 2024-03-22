@@ -29,5 +29,14 @@ description = "Data for the icu_locid_transform crate"
 homepage = "https://icu4x.unicode.org"
 readme = "README.md"
 categories = ["internationalization"]
-license-file = "LICENSE"
+license = "Unicode-3.0"
 repository = "https://github.com/unicode-org/icu4x"
+
+[package.metadata.sources.cldr]
+tagged = "44.1.0"
+
+[package.metadata.sources.icuexport]
+tagged = "release-74-2"
+
+[package.metadata.sources.segmenter_lstm]
+tagged = "v0.1.0"

@@ -28,6 +28,7 @@ test = false
 
 [dependencies.percent-encoding]
 version = "2.3.0"
+path = "../percent_encoding"
 default-features = false
 
 [features]

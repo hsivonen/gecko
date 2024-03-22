@@ -45,6 +45,16 @@ git = "https://github.com/hsivonen/chardetng_c"
 rev = "ed8a4c6f900a90d4dbc1d64b856e61490a1c3570"
 replace-with = "vendored-sources"
 
+[source."git+https://github.com/hsivonen/icu4x?rev=d18887ceaf05c2075e73a6d7f9db2af1be1a116c"]
+git = "https://github.com/hsivonen/icu4x"
+rev = "d18887ceaf05c2075e73a6d7f9db2af1be1a116c"
+replace-with = "vendored-sources"
+
+[source."git+https://github.com/hsivonen/rust-url?rev=3c378387caa546d28948410d736d0fd05a816adf"]
+git = "https://github.com/hsivonen/rust-url"
+rev = "3c378387caa546d28948410d736d0fd05a816adf"
+replace-with = "vendored-sources"
+
 [source."git+https://github.com/jfkthame/mapped_hyph.git?rev=c7651a0cffff41996ad13c44f689bd9cd2192c01"]
 git = "https://github.com/jfkthame/mapped_hyph.git"
 rev = "c7651a0cffff41996ad13c44f689bd9cd2192c01"

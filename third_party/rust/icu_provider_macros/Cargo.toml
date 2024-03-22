@@ -29,18 +29,16 @@ description = "Proc macros for ICU data providers"
 homepage = "https://icu4x.unicode.org"
 readme = "README.md"
 categories = ["internationalization"]
-license-file = "LICENSE"
+license = "Unicode-3.0"
 repository = "https://github.com/unicode-org/icu4x"
 
 [lib]
 path = "src/lib.rs"
 proc-macro = true
 
-[dependencies.proc-macro2]
-version = "1.0.27"
-
-[dependencies.quote]
-version = "1.0.9"
+[dependencies]
+proc-macro2 = "1.0.27"
+quote = "1.0.9"
 
 [dependencies.syn]
 version = "2"
@@ -49,4 +47,5 @@ features = [
     "parsing",
 ]
 
-[dev-dependencies]
+[dev-dependencies.icu_provider]
+path = ".."

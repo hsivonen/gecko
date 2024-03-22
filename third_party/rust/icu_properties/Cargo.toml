@@ -29,7 +29,7 @@ description = "Definitions for Unicode properties"
 homepage = "https://icu4x.unicode.org"
 readme = "README.md"
 categories = ["internationalization"]
-license-file = "LICENSE"
+license = "Unicode-3.0"
 repository = "https://github.com/unicode-org/icu4x"
 
 [package.metadata.docs.rs]
@@ -37,6 +37,7 @@ all-features = true
 
 [dependencies.databake]
 version = "0.1.7"
+path = "../../utils/databake"
 features = ["derive"]
 optional = true
 default-features = false
@@ -47,21 +48,25 @@ default-features = false
 
 [dependencies.icu_collections]
 version = "~1.4.0"
+path = "../collections"
 default-features = false
 
 [dependencies.icu_locid_transform]
 version = "~1.4.0"
+path = "../locid_transform"
 features = ["compiled_data"]
 optional = true
 default-features = false
 
 [dependencies.icu_properties_data]
 version = "~1.4.0"
+path = "../../provider/baked/properties"
 optional = true
 default-features = false
 
 [dependencies.icu_provider]
 version = "~1.4.0"
+path = "../../provider/core"
 features = ["macros"]
 default-features = false
 
@@ -76,6 +81,7 @@ default-features = false
 
 [dependencies.tinystr]
 version = "0.7.4"
+path = "../../utils/tinystr"
 features = [
     "alloc",
     "zerovec",
@@ -89,10 +95,13 @@ default-features = false
 
 [dependencies.zerovec]
 version = "0.10.1"
+path = "../../utils/zerovec"
 features = ["derive"]
 default-features = false
 
-[dev-dependencies]
+[dev-dependencies.icu]
+path = "../../components/icu"
+default-features = false
 
 [features]
 bidi = ["dep:unicode-bidi"]

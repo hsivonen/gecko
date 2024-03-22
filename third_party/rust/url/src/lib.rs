@@ -146,7 +146,9 @@ pub use form_urlencoded;
 extern crate serde;
 
 use crate::host::HostInternal;
-use crate::parser::{to_u32, Context, Parser, SchemeType, PATH_SEGMENT, USERINFO};
+use crate::parser::{
+    to_u32, Context, Parser, SchemeType, PATH_SEGMENT, SPECIAL_PATH_SEGMENT, USERINFO,
+};
 use percent_encoding::{percent_decode, percent_encode, utf8_percent_encode};
 use std::borrow::Borrow;
 use std::cmp;
@@ -1524,7 +1526,8 @@ impl Url {
         }
     }
 
-    /// Change this URL’s query string.
+    /// Change this URL’s query string. If `query` is `None`, this URL's
+    /// query string will be cleared.
     ///
     /// # Examples
     ///
@@ -2816,7 +2819,7 @@ fn path_to_file_url_segments(
         serialization.push('/');
         serialization.extend(percent_encode(
             component.as_os_str().as_bytes(),
-            PATH_SEGMENT,
+            SPECIAL_PATH_SEGMENT,
         ));
     }
     if empty {

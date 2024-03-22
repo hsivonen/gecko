@@ -35,7 +35,7 @@ keywords = [
     "hashmap",
     "btreemap",
 ]
-license-file = "LICENSE"
+license = "Unicode-3.0"
 repository = "https://github.com/unicode-org/icu4x"
 
 [package.metadata.cargo-all-features]
@@ -75,6 +75,7 @@ required-features = ["serde"]
 
 [dependencies.databake]
 version = "0.1.7"
+path = "../databake"
 optional = true
 default-features = false
 
@@ -86,15 +87,22 @@ default-features = false
 
 [dependencies.yoke]
 version = "0.7.3"
+path = "../yoke"
 features = ["derive"]
 optional = true
 default-features = false
 
-[dev-dependencies.bincode]
-version = "1"
+[dev-dependencies]
+bincode = "1"
+bytecheck = "0.6"
+serde = "1"
+serde_json = "1"
 
-[dev-dependencies.bytecheck]
-version = "0.6"
+[dev-dependencies.icu_benchmark_macros]
+path = "../../tools/benchmark/macros"
+
+[dev-dependencies.icu_locid]
+path = "../../components/locid"
 
 [dev-dependencies.postcard]
 version = "1.0.0"
@@ -105,12 +113,6 @@ default-features = false
 version = "0.7"
 features = ["validation"]
 
-[dev-dependencies.serde]
-version = "1"
-
-[dev-dependencies.serde_json]
-version = "1"
-
 [features]
 alloc = []
 bench = ["serde"]
@@ -120,5 +122,5 @@ serde = ["dep:serde"]
 testing = ["alloc"]
 yoke = ["dep:yoke"]
 
-[target."cfg(not(target_arch = \"wasm32\"))".dev-dependencies.criterion]
-version = "0.4"
+[target."cfg(not(target_arch = \"wasm32\"))".dev-dependencies]
+criterion = "0.4"

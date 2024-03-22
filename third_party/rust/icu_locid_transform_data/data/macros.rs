@@ -20,6 +20,7 @@ macro_rules! __make_provider {
             #[allow(dead_code)]
             pub const MUST_USE_MAKE_PROVIDER_MACRO: () = ();
         }
+        icu_provider::impl_data_provider_never_marker!($name);
     };
 }
 #[doc(inline)]
@@ -40,10 +41,10 @@ mod fallback_supplement_co_v1;
 #[doc(inline)]
 pub use __impl_fallback_supplement_co_v1 as impl_fallback_supplement_co_v1;
 #[macro_use]
-#[path = "macros/locid_transform_aliases_v1.rs.data"]
-mod locid_transform_aliases_v1;
+#[path = "macros/locid_transform_aliases_v2.rs.data"]
+mod locid_transform_aliases_v2;
 #[doc(inline)]
-pub use __impl_locid_transform_aliases_v1 as impl_locid_transform_aliases_v1;
+pub use __impl_locid_transform_aliases_v2 as impl_locid_transform_aliases_v2;
 #[macro_use]
 #[path = "macros/locid_transform_likelysubtags_ext_v1.rs.data"]
 mod locid_transform_likelysubtags_ext_v1;

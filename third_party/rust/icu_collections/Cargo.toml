@@ -29,7 +29,7 @@ description = "Collection of API for use in ICU libraries."
 homepage = "https://icu4x.unicode.org"
 readme = "README.md"
 categories = ["internationalization"]
-license-file = "LICENSE"
+license = "Unicode-3.0"
 repository = "https://github.com/unicode-org/icu4x"
 
 [package.metadata.cargo-all-features]
@@ -43,22 +43,23 @@ bench = false
 
 [[bench]]
 name = "codepointtrie"
-path = "src/codepointtrie/benches/codepointtrie.rs"
+path = "benches/codepointtrie.rs"
 harness = false
 
 [[bench]]
 name = "iai_cpt"
-path = "src/codepointtrie/benches/iai_cpt.rs"
+path = "benches/iai_cpt.rs"
 harness = false
 required-features = ["bench"]
 
 [[bench]]
 name = "inv_list"
-path = "src/codepointinvlist/benches/inv_list.rs"
+path = "benches/inv_list.rs"
 harness = false
 
 [dependencies.databake]
 version = "0.1.7"
+path = "../../utils/databake"
 features = ["derive"]
 optional = true
 default-features = false
@@ -78,24 +79,39 @@ default-features = false
 
 [dependencies.yoke]
 version = "0.7.3"
+path = "../../utils/yoke"
 features = ["derive"]
 default-features = false
 
 [dependencies.zerofrom]
 version = "0.1.2"
+path = "../../utils/zerofrom"
 features = ["derive"]
 default-features = false
 
 [dependencies.zerovec]
 version = "0.10.1"
+path = "../../utils/zerovec"
 features = [
     "derive",
     "yoke",
 ]
 default-features = false
 
-[dev-dependencies.iai]
-version = "0.1.1"
+[dev-dependencies]
+iai = "0.1.1"
+serde_json = "1.0"
+toml = "0.5"
+
+[dev-dependencies.icu]
+path = "../../components/icu"
+default-features = false
+
+[dev-dependencies.icu_benchmark_macros]
+path = "../../tools/benchmark/macros"
+
+[dev-dependencies.icu_properties]
+path = "../../components/properties"
 
 [dev-dependencies.postcard]
 version = "1.0.0"
@@ -105,12 +121,6 @@ default-features = false
 [dev-dependencies.serde]
 version = "1.0"
 features = ["derive"]
-
-[dev-dependencies.serde_json]
-version = "1.0"
-
-[dev-dependencies.toml]
-version = "0.5"
 
 [features]
 bench = []
@@ -124,5 +134,5 @@ serde = [
 ]
 std = []
 
-[target."cfg(not(target_arch = \"wasm32\"))".dev-dependencies.criterion]
-version = "0.4"
+[target."cfg(not(target_arch = \"wasm32\"))".dev-dependencies]
+criterion = "0.4"

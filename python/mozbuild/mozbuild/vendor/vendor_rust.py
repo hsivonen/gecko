@@ -95,6 +95,8 @@ TOLERATED_DUPES = {
     # and hasn't been updated in 1.5 years (an hypothetical update is
     # expected to remove the dependency on time altogether).
     "time": 2,
+    # Temporary hack
+    "tinystr": 2,
 }
 
 
@@ -342,6 +344,7 @@ Please commit or stash these changes before vendoring, or re-run with `--ignore-
         "icu_segmenter": ICU4X_LICENSE_SHA256,
         "litemap": ICU4X_LICENSE_SHA256,
         "tinystr": ICU4X_LICENSE_SHA256,
+        "tinystr-0.7.4": ICU4X_LICENSE_SHA256,
         "writeable": ICU4X_LICENSE_SHA256,
         "yoke": ICU4X_LICENSE_SHA256,
         "yoke-derive": ICU4X_LICENSE_SHA256,
