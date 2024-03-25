@@ -6,6 +6,21 @@
 // option. This file may not be copied, modified, or distributed
 // except according to those terms.
 
+//! This module provides the lower-level API for UTS 46.
+//!
+//! [`Uts46::process`] is the core that the other convenience
+//! methods build on.
+//!
+//! UTS 46 flags map to this API as follows:
+//!
+//! * _CheckHyphens_ - _true_: [`Hyphens::Check`], _false_: [`Hyphens::Allow`]; the WHATWG URL Standard sets this to _false_ for normal (non-conformance-checker) user agents.
+//! * _CheckBidi_ - Always _true_; cannot be configured, since this flag is _true_ even when WHATWG URL Standard _beStrict_ is _false_.
+//! * _CheckJoiners_ - Always _true_; cannot be configured, since this flag is _true_ even when WHATWG URL Standard _beStrict_ is _false_.
+//! * _UseSTD3ASCIIRules_ - _true_: [`AsciiDenyList::STD3`], _false_: [`AsciiDenyList::EMPTY`]; however, the check the WHATWG URL Standard performs right after the UTS 46 invocation corresponds to [`AsciiDenyList::URL`].
+//! * _Transitional_Processing_ - Always _false_ but could be implemented as a preprocessing step. This flag is deprecated and for Web purposes the transition is over in the sense that all of Firefox, Safari, or Chrome set this flag to _false_.
+//! * _VerifyDnsLength_ - _true_: [`DnsLength::Verify`], _false_: [`DnsLength::Ignore`]; the WHATWG URL Standard sets this to _false_ for normal (non-conformance-checker) user agents.
+//! * _IgnoreInvalidPunycode_ - Always _false_; cannot be configured. (Not yet covered by the WHATWG URL Standard, but 2 out of 3 major browser clearly behave as if this was _false_).
+
 use crate::punycode::Decoder;
 use crate::punycode::InternalCaller;
 use alloc::borrow::Cow;
@@ -43,16 +58,12 @@ enum RtlNumeralState {
     Arabic,
 }
 
-/// Computes the ASCII deny list for [`Strictness::Std3ConformanceChecker`].
-const fn ldh_mask(allow_dot: bool) -> u128 {
+/// Computes the mask for upper-case ASCII.
+const fn upper_case_mask() -> u128 {
     let mut accu = 0u128;
     let mut b = 0u8;
     while b < 128 {
-        if !((b >= b'a' && b <= b'z')
-            || (b >= b'0' && b <= b'9')
-            || b == b'-'
-            || (allow_dot && b == b'.'))
-        {
+        if (b >= b'A') && (b <= b'Z') {
             accu |= 1u128 << b;
         }
         b += 1;
@@ -60,51 +71,40 @@ const fn ldh_mask(allow_dot: bool) -> u128 {
     accu
 }
 
-/// The ASCII deny list for [`Strictness::Std3ConformanceChecker`] with dot allowed.
-const LDH_MASK: u128 = ldh_mask(true);
+/// Bit set for upper-case ASCII.
+const UPPER_CASE_MASK: u128 = upper_case_mask();
 
-/// The ASCII deny list for [`Strictness::Std3ConformanceChecker`] with dot disallowed.
-const LDH_MASK_DENY_DOT: u128 = ldh_mask(false);
-
-/// Computes the ASCII deny list for [`Strictness::WhatwgUserAgent`].
-const fn whatwg_mask(allow_dot: bool) -> u128 {
+/// Computes the mask for glyphless ASCII.
+const fn glyphless_mask() -> u128 {
     let mut accu = 0u128;
     let mut b = 0u8;
     while b < 128 {
-        match b {
-            b'A'..=b'Z'
-            | 0..=b' '
-            | b'#'
-            | b'/'
-            | b':'
-            | b'<'
-            | b'>'
-            | b'?'
-            | b'@'
-            | b'['
-            | b'\\'
-            | b']'
-            | b'^'
-            | b'|'
-            | b'%'
-            | 0x7F => {
-                accu |= 1u128 << b;
-            }
-            b'.' if !allow_dot => {
-                accu |= 1u128 << b;
-            }
-            _ => {}
+        if (b <= b' ') || (b == 0x7F) {
+            accu |= 1u128 << b;
         }
         b += 1;
     }
     accu
 }
 
-/// The ASCII deny list for [`Strictness::WhatwgUserAgent`] with dot allowed.
-const WHATWG_MASK: u128 = whatwg_mask(true);
+/// Bit set for glyphless ASCII.
+const GLYPHLESS_MASK: u128 = glyphless_mask();
 
-/// The ASCII deny list for [`Strictness::WhatwgUserAgent`] with dot disallowed.
-const WHATWG_MASK_DENY_DOT: u128 = whatwg_mask(false);
+/// The mask for the ASCII dot.
+const DOT_MASK: u128 = 1 << b'.';
+
+/// Computes the ASCII deny list for STD3 ASCII rules.
+const fn ldh_mask() -> u128 {
+    let mut accu = 0u128;
+    let mut b = 0u8;
+    while b < 128 {
+        if !((b >= b'a' && b <= b'z') || (b >= b'0' && b <= b'9') || b == b'-' || b == b'.') {
+            accu |= 1u128 << b;
+        }
+        b += 1;
+    }
+    accu
+}
 
 /// Turns a joining type into a mask for comparing with multiple type at once.
 const fn joining_type_to_mask(jt: JoiningType) -> u32 {
@@ -183,6 +183,15 @@ const PUNYCODE_PREFIX: u32 =
     ((b'-' as u32) << 24) | ((b'-' as u32) << 16) | ((b'N' as u32) << 8) | b'X' as u32;
 
 const PUNYCODE_PREFIX_MASK: u32 = (0xFF << 24) | (0xFF << 16) | (0xDF << 8) | 0xDF;
+
+fn write_punycode_label<W: Write + ?Sized>(
+    label: &[char],
+    sink: &mut W,
+) -> Result<(), ProcessingError> {
+    sink.write_str("xn--")?;
+    crate::punycode::encode_into::<_, _, InternalCaller>(label.iter().copied(), sink)?;
+    Ok(())
+}
 
 #[inline(always)]
 fn has_punycode_prefix(slice: &[u8]) -> bool {
@@ -336,22 +345,122 @@ fn classify_for_punycode(label: &[char]) -> PunycodeClassification {
     }
 }
 
-/// The strictness profile to be applied.
+/// The ASCII deny list to be applied.
+#[derive(PartialEq, Eq, Copy, Clone)]
+#[repr(transparent)]
+pub struct AsciiDenyList {
+    bits: u128,
+}
+
+impl AsciiDenyList {
+    /// Computes (preferably at compile time) an ASCII deny list.
+    ///
+    /// Setting `deny_glyphless` to `true` denies U+0020 SPACE and below
+    /// as well as U+007F DELETE for convenience without having to list
+    /// these characters in the `deny_list` string.
+    ///
+    /// `deny_list` is the list of ASCII characters to deny. This
+    /// list must not contain any of:
+    /// * Letters
+    /// * Digits
+    /// * Hyphen
+    /// * Dot (period / full-stop)
+    /// * Non-ASCII
+    ///
+    /// # Panics
+    ///
+    /// If the deny list contains characters listed as prohibited above.
+    pub const fn new(deny_glyphless: bool, deny_list: &str) -> Self {
+        let mut bits = UPPER_CASE_MASK;
+        if deny_glyphless {
+            bits |= GLYPHLESS_MASK;
+        }
+        let mut i = 0;
+        let bytes = deny_list.as_bytes();
+        while i < bytes.len() {
+            let b = bytes[i];
+            assert!(b < 0x80, "ASCII deny list must be ASCII.");
+            // assert_ne not yet available in const context.
+            assert!(b != b'.', "ASCII deny list must not contain the dot.");
+            assert!(b != b'-', "ASCII deny list must not contain the hyphen.");
+            assert!(
+                !((b >= b'0') && (b <= b'9')),
+                "ASCII deny list must not contain digits."
+            );
+            assert!(
+                !((b >= b'a') && (b <= b'z')),
+                "ASCII deny list must not contain letters."
+            );
+            assert!(
+                !((b >= b'A') && (b <= b'Z')),
+                "ASCII deny list must not contain letters."
+            );
+            bits |= 1u128 << b;
+            i += 1;
+        }
+        AsciiDenyList { bits }
+    }
+
+    /// No ASCII deny list. This corresponds to _UseSTD3ASCIIRules=false_.
+    ///
+    /// Equivalent to `AsciiDenyList::new(false, "")`.
+    ///
+    /// Note: Not denying the space and control characters can result in
+    /// strange behavior. Without a deny list provided to the UTS 46
+    /// operation, the caller is expected perform filtering afterwards,
+    /// but it's more efficient to use `AsciiDenyList` than post-processing,
+    /// because the internals of this crate can optimize away checks in
+    /// certain cases.
+    pub const EMPTY: AsciiDenyList = AsciiDenyList::new(false, "");
+
+    /// The STD3 deny list. This corresponds to _UseSTD3ASCIIRules=true_.
+    ///
+    /// Note that this deny list rejects the underscore, which occurs in
+    /// pseudo-hosts used by various TXT record-based protocols, and also
+    /// characters that may occurs in non-DNS naming, such as NetBIOS.
+    pub const STD3: AsciiDenyList = AsciiDenyList { bits: ldh_mask() };
+
+    /// [Forbidden domain code point](https://url.spec.whatwg.org/#forbidden-domain-code-point) from the WHATWG URL Standard.
+    ///
+    /// Equivalent to `AsciiDenyList::new(true, "%#/:<>?@[\\]^|")`.
+    ///
+    /// Note that this deny list rejects IPv6 addresses, so (as in URL
+    /// parsing) you need to check for IPv6 addresses first and not
+    /// put them through UTS 46 processing.
+    pub const URL: AsciiDenyList = AsciiDenyList::new(true, "%#/:<>?@[\\]^|");
+}
+
+/// The _CheckHyphens_ mode.
+#[derive(PartialEq, Eq, Copy, Clone)]
+#[non_exhaustive] // non_exhaustive in case a middle mode that prohibits only first and last position needs to be added
+pub enum Hyphens {
+    /// _CheckHyphens=true_: Prohibit hyphens in the first, third, fourth,
+    /// and last position in the label.
+    ///
+    /// Note that this mode rejects real-world names, including YouTube CDN nodes
+    /// and some GitHub user pages.
+    Check,
+
+    /// _CheckHyphens=false_: Do not place positional restrictions on hyphens.
+    ///
+    /// This mode is used by the WHATWG URL Standard for normal User Agent processing
+    /// (i.e. not conformance checking).
+    Allow,
+}
+
+/// The UTS 46 _VerifyDNSLength_ flag.
 #[derive(PartialEq, Eq, Copy, Clone)]
 #[non_exhaustive]
-pub enum Strictness {
-    /// The _beStrict=false_ option from the WHATWG URL Standard for
-    /// practical usage.
-    WhatwgUserAgent,
-
-    /// The _beStrict=true_ option from the WHATWG URL Standard for
-    /// conformance checking.
+pub enum DnsLength {
+    /// _VerifyDNSLength=true_ but with the trailing dot allowed.
     ///
-    /// Note that this rejects various real-world names including:
-    /// * YouTube CDN nodes
-    /// * Some GitHub user pages
-    /// * Pseudo-hosts used by various TXT record-based protocols.
-    Std3ConformanceChecker,
+    /// The trailing dot behavior may change in a future version. The UTS 46 test suite
+    /// seems to require allowing the trailing dot, even though the spec says otherwise.
+    ///
+    /// See section 6.3 in <https://www.unicode.org/L2/L2024/24064-utc179-properties-recs.pdf>
+    Verify,
+    /// _VerifyDNSLength=false_. (Possibly relevant for allowing non-DNS naming systems.)
+    Ignore,
 }
 
 /// Policy for customizing behavior in case of an error.
@@ -387,7 +496,7 @@ pub enum ProcessingSuccess {
 /// The failure outcome of [`Uts46::process`]
 #[derive(PartialEq, Eq, Copy, Clone, Debug)]
 pub enum ProcessingError {
-    /// There was a validity error according to the chosen [`Strictness`] level.
+    /// There was a validity error according to the chosen options.
     ///
     /// In case of `Operation::ToAscii`, there is no output. Otherwise, output was written to the
     /// sink and the output contains at least one U+FFFD REPLACEMENT CHARACTER to denote an error.
@@ -479,19 +588,32 @@ impl Uts46 {
     // a constructor for run-time data loading?
 
     /// Performs the [ToASCII](https://www.unicode.org/reports/tr46/#ToASCII) operation
-    /// from UTS #46 according to the strictness level indicated by `strictness`.
+    /// from UTS #46 with the options indicated.
     ///
-    /// If (and only if) `strictness` is `Strictness::Std3ConformanceChecker`,
-    /// _VerifyDnsLength_ from UTS #46 is performed.
+    /// # Arguments
+    ///
+    /// * `domain_name` - The input domain name as UTF-8 bytes. (The UTF-8ness is checked by
+    /// this method and input that is not well-formed UTF-8 is treated as an error. If you
+    /// already have a `&str`, call `.as_bytes()` on it.)
+    /// * `ascii_deny_list` - What ASCII deny list, if any, to apply. The UTS 46
+    /// _UseSTD3ASCIIRules_ flag or the WHATWG URL Standard forbidden domain code point
+    /// processing is handled via this argument. Most callers are probably the best off
+    /// by using [`AsciiDenyList::URL`] here.
+    /// * `hyphens` - The UTS 46 _CheckHyphens_ flag. Most callers are probably the best
+    /// off by using [`Hyphens::Allow`] here.
+    /// * `dns_length` - The UTS 46 _VerifyDNSLength_ flag.
     pub fn to_ascii<'a>(
         &self,
         domain_name: &'a [u8],
-        strictness: Strictness,
+        ascii_deny_list: AsciiDenyList,
+        hyphens: Hyphens,
+        dns_length: DnsLength,
     ) -> Result<Cow<'a, str>, crate::Errors> {
         let mut s = String::new();
         match self.process(
             domain_name,
-            strictness,
+            ascii_deny_list,
+            hyphens,
             ErrorPolicy::FailFast,
             |_, _, _| false,
             &mut s,
@@ -500,7 +622,7 @@ impl Uts46 {
             // SAFETY: `ProcessingSuccess::Passthrough` asserts that `domain_name` is ASCII.
             Ok(ProcessingSuccess::Passthrough) => {
                 let cow = Cow::Borrowed(unsafe { core::str::from_utf8_unchecked(domain_name) });
-                if strictness == Strictness::Std3ConformanceChecker && !verify_dns_length(&cow) {
+                if dns_length == DnsLength::Verify && !verify_dns_length(&cow) {
                     Err(crate::Errors::default())
                 } else {
                     Ok(cow)
@@ -508,7 +630,7 @@ impl Uts46 {
             }
             Ok(ProcessingSuccess::WroteToSink) => {
                 let cow: Cow<'_, str> = Cow::Owned(s);
-                if strictness == Strictness::Std3ConformanceChecker && !verify_dns_length(&cow) {
+                if dns_length == DnsLength::Verify && !verify_dns_length(&cow) {
                     Err(crate::Errors::default())
                 } else {
                     Ok(cow)
@@ -520,22 +642,38 @@ impl Uts46 {
     }
 
     /// Performs the [ToUnicode](https://www.unicode.org/reports/tr46/#ToUnicode) operation
-    /// from UTS #46 according to the strictness level indicated by `strictness`. When there
+    /// from UTS #46 according to the options given. When there
     /// are errors, there is still output, which may be rendered user, even through
     /// the output must not be used in networking protocols. Errors are denoted
     /// by U+FFFD REPLACEMENT CHARACTERs in the output. (That is, if the second item of the
     /// return tuple is `Err`, the first item of the return tuple is guaranteed to contain
     /// at least one U+FFFD.)
+    ///
+    /// Most applications probably shouldn't use this method and should be using
+    /// [`Uts46::to_user_interface`] instead.
+    ///
+    /// # Arguments
+    ///
+    /// * `domain_name` - The input domain name as UTF-8 bytes. (The UTF-8ness is checked by
+    /// this method and input that is not well-formed UTF-8 is treated as an error. If you
+    /// already have a `&str`, call `.as_bytes()` on it.)
+    /// * `ascii_deny_list` - What ASCII deny list, if any, to apply. The UTS 46
+    /// _UseSTD3ASCIIRules_ flag or the WHATWG URL Standard forbidden domain code point
+    /// processing is handled via this argument. Most callers are probably the best off
+    /// by using [`AsciiDenyList::URL`] here.
+    /// * `hyphens` - The UTS 46 _CheckHyphens_ flag. Most callers are probably the best
+    /// off by using [`Hyphens::Allow`] here.
     pub fn to_unicode<'a>(
         &self,
         domain_name: &'a [u8],
-        strictness: Strictness,
+        ascii_deny_list: AsciiDenyList,
+        hyphens: Hyphens,
     ) -> (Cow<'a, str>, Result<(), crate::Errors>) {
-        self.to_user_interface(domain_name, strictness, |_, _, _| true)
+        self.to_user_interface(domain_name, ascii_deny_list, hyphens, |_, _, _| true)
     }
 
     /// Performs the [ToUnicode](https://www.unicode.org/reports/tr46/#ToUnicode) operation
-    /// from UTS #46 according to the strictness level indicated by `strictness` with some
+    /// from UTS #46 according to options given with some
     /// error-free Unicode labels output according to
     /// [ToASCII](https://www.unicode.org/reports/tr46/#ToASCII) instead as decided by
     /// application policy implemented via the `output_as_unicode` closure. The purpose
@@ -559,16 +697,39 @@ impl Uts46 {
     /// U+FFFD REPLACEMENT CHARACTERs in the output. (That is, if the second item
     /// of the return tuple is `Err`, the first item of the return tuple is guaranteed to contain
     /// at least one U+FFFD.) Labels that contain errors are not converted to Punycode.
+    ///
+    /// # Arguments
+    ///
+    /// * `domain_name` - The input domain name as UTF-8 bytes. (The UTF-8ness is checked by
+    /// this method and input that is not well-formed UTF-8 is treated as an error. If you
+    /// already have a `&str`, call `.as_bytes()` on it.)
+    /// * `ascii_deny_list` - What ASCII deny list, if any, to apply. The UTS 46
+    /// _UseSTD3ASCIIRules_ flag or the WHATWG URL Standard forbidden domain code point
+    /// processing is handled via this argument. Most callers are probably the best off
+    /// by using [`AsciiDenyList::URL`] here.
+    /// * `hyphens` - The UTS 46 _CheckHyphens_ flag. Most callers are probably the best
+    /// off by using [`Hyphens::Allow`] here.
+    /// * `output_as_unicode` - A closure for deciding if a label should be output as Unicode
+    /// (as opposed to Punycode). The first argument is the label for which a decision is
+    /// needed (always non-empty slice). The second argument is the TLD (potentially empty).
+    /// The third argument is `true` iff the domain name as a whole is a bidi domain name.
+    /// Only non-erroneous labels that contain at least one non-ASCII character are passed
+    /// to the closure as the first argument. The second and third argument values are
+    /// guaranteed to remain the same during a single call to `process`, and the closure
+    /// may cache computations derived from the second and third argument (hence the
+    /// `FnMut` type).
     pub fn to_user_interface<'a, OutputUnicode: FnMut(&[char], &[char], bool) -> bool>(
         &self,
         domain_name: &'a [u8],
-        strictness: Strictness,
+        ascii_deny_list: AsciiDenyList,
+        hyphens: Hyphens,
         output_as_unicode: OutputUnicode,
     ) -> (Cow<'a, str>, Result<(), crate::Errors>) {
         let mut s = String::new();
         match self.process(
             domain_name,
-            strictness,
+            ascii_deny_list,
+            hyphens,
             ErrorPolicy::MarkErrors,
             output_as_unicode,
             &mut s,
@@ -594,12 +755,12 @@ impl Uts46 {
     /// * `domain_name` - The input domain name as UTF-8 bytes. (The UTF-8ness is checked by
     /// this method and input that is not well-formed UTF-8 is treated as an error. If you
     /// already have a `&str`, call `.as_bytes()` on it.)
-    /// * `strictness` - Whether to enforce IETF or WHATWG rules. To be able to handle
-    /// real-world DNS names and well as non-DNS (such as NetBIOS) naming, the WHATWG rules
-    /// are more compatible. This method does not implement _VerifyDNSLength_ from UTS 46.
-    /// If that check is desired, it needs to be performed on the output of this method.
-    /// (The check only makes sense if `output_as_unicode` is `|_, _| false`.) See
-    /// [`verify_dns_length`].
+    /// * `ascii_deny_list` - What ASCII deny list, if any, to apply. The UTS 46
+    /// _UseSTD3ASCIIRules_ flag or the WHATWG URL Standard forbidden domain code point
+    /// processing is handled via this argument. Most callers are probably the best off
+    /// by using [`AsciiDenyList::URL`] here.
+    /// * `hyphens` - The UTS 46 _CheckHyphens_ flag. Most callers are probably the best
+    /// off by using [`Hyphens::Allow`] here.
     /// * `error_policy` - Whether to fail fast or to produce output that may be rendered
     /// for the user to examine in case of errors.
     /// * `output_as_unicode` - A closure for deciding if a label should be output as Unicode
@@ -667,7 +828,8 @@ impl Uts46 {
     pub fn process<W: Write + ?Sized, OutputUnicode: FnMut(&[char], &[char], bool) -> bool>(
         &self,
         domain_name: &[u8],
-        strictness: Strictness,
+        ascii_deny_list: AsciiDenyList,
+        hyphens: Hyphens,
         error_policy: ErrorPolicy,
         mut output_as_unicode: OutputUnicode,
         sink: &mut W,
@@ -680,7 +842,8 @@ impl Uts46 {
         // to avoid duplicating that code when monomorphizing over `W` and `OutputUnicode`.
         let (passthrough_up_to, is_bidi, had_errors) = self.process_inner(
             domain_name,
-            strictness,
+            ascii_deny_list,
+            hyphens,
             fail_fast,
             &mut domain_buffer,
             &mut already_punycode,
@@ -819,8 +982,7 @@ impl Uts46 {
                         core::str::from_utf8_unchecked(&domain_name[..passthrough_up_to_extended])
                     })?;
                 }
-                sink.write_str("xn--")?;
-                crate::punycode::encode_into::<_, _, InternalCaller>(label.iter().copied(), sink)?;
+                write_punycode_label(label, sink)?;
             }
         }
 
@@ -935,11 +1097,7 @@ impl Uts46 {
                                 )
                             })?;
                         }
-                        sink.write_str("xn--")?;
-                        crate::punycode::encode_into::<_, _, InternalCaller>(
-                            label.iter().copied(),
-                            sink,
-                        )?;
+                        write_punycode_label(label, sink)?;
                     }
                 }
                 if !flushed_prefix {
@@ -955,10 +1113,12 @@ impl Uts46 {
 
     /// The part of `process` that doesn't need to be generic over the sink and
     /// can avoid monomorphizing in the interest of code size.
+    #[inline(never)]
     fn process_inner<'a>(
         &self,
         domain_name: &'a [u8],
-        strictness: Strictness,
+        ascii_deny_list: AsciiDenyList,
+        hyphens: Hyphens,
         fail_fast: bool,
         domain_buffer: &mut SmallVec<[char; 253]>,
         already_punycode: &mut SmallVec<[AlreadyAsciiLabel<'a>; 8]>,
@@ -983,10 +1143,8 @@ impl Uts46 {
             }
         };
 
-        let (deny_list, deny_list_deny_dot) = match strictness {
-            Strictness::WhatwgUserAgent => (WHATWG_MASK, WHATWG_MASK_DENY_DOT),
-            Strictness::Std3ConformanceChecker => (LDH_MASK, LDH_MASK_DENY_DOT),
-        };
+        let deny_list = ascii_deny_list.bits;
+        let deny_list_deny_dot = deny_list | DOT_MASK;
 
         let mut had_errors = false;
 
@@ -1059,7 +1217,7 @@ impl Uts46 {
                                 }
 
                                 if self.check_label(
-                                    strictness,
+                                    hyphens,
                                     &mut domain_buffer[current_label_start..],
                                     fail_fast,
                                     &mut had_errors,
@@ -1116,7 +1274,7 @@ impl Uts46 {
                     domain_buffer.push(c);
                 }
                 if non_punycode_ascii_label {
-                    if strictness == Strictness::Std3ConformanceChecker {
+                    if hyphens == Hyphens::Check {
                         if check_hyphens(
                             &mut domain_buffer[current_label_start..],
                             fail_fast,
@@ -1232,7 +1390,7 @@ impl Uts46 {
                                 }
                             }
                             if self.check_label(
-                                strictness,
+                                hyphens,
                                 &mut domain_buffer[current_label_start..],
                                 fail_fast,
                                 &mut had_errors,
@@ -1378,6 +1536,7 @@ impl Uts46 {
         (passthrough_up_to, is_bidi, had_errors)
     }
 
+    #[inline(never)]
     fn after_punycode_decode(
         &self,
         domain_buffer: &mut SmallVec<[char; 253]>,
@@ -1423,16 +1582,17 @@ impl Uts46 {
         false
     }
 
+    #[inline(never)]
     fn check_label(
         &self,
-        strictness: Strictness,
+        hyphens: Hyphens,
         mut_label: &mut [char],
         fail_fast: bool,
         had_errors: &mut bool,
         first_needs_combining_mark_check: bool,
         needs_contextj_check: bool,
     ) -> bool {
-        if strictness == Strictness::Std3ConformanceChecker {
+        if hyphens == Hyphens::Check {
             if check_hyphens(mut_label, fail_fast, had_errors) {
                 return true;
             }

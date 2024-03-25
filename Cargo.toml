@@ -7,7 +7,7 @@
 members = [
   "browser/app/nmhproxy/",
   "js/src/frontend/smoosh",
-  "js/src/rust",
+  "js/src/rust", "netwerk/base/idna_glue",
   "netwerk/test/http3server",
   "security/manager/ssl/builtins",
   "security/manager/ssl/ipcclientcerts",
@@ -197,11 +197,11 @@ icu_normalizer = { git = "https://github.com/hsivonen/icu4x", rev = "d18887ceaf0
 icu_normalizer_data = { git = "https://github.com/hsivonen/icu4x", rev = "d18887ceaf05c2075e73a6d7f9db2af1be1a116c" }
 icu_properties = { git = "https://github.com/hsivonen/icu4x", rev = "d18887ceaf05c2075e73a6d7f9db2af1be1a116c" }
 icu_properties_data = { git = "https://github.com/hsivonen/icu4x", rev = "d18887ceaf05c2075e73a6d7f9db2af1be1a116c" }
-url = { git = "https://github.com/hsivonen/rust-url", rev = "3c378387caa546d28948410d736d0fd05a816adf" }
-idna = { git = "https://github.com/hsivonen/rust-url", rev = "3c378387caa546d28948410d736d0fd05a816adf" }
+url = { git = "https://github.com/hsivonen/rust-url", rev = "fabcb3fe7da187066b26e681246f8ac8d8e4d0db" }
+idna = { git = "https://github.com/hsivonen/rust-url", rev = "fabcb3fe7da187066b26e681246f8ac8d8e4d0db" }
 # Due to workspaces, need to override these, too.
-form_urlencoded = { git = "https://github.com/hsivonen/rust-url", rev = "3c378387caa546d28948410d736d0fd05a816adf" }
-percent-encoding = { git = "https://github.com/hsivonen/rust-url", rev = "3c378387caa546d28948410d736d0fd05a816adf" }
+form_urlencoded = { git = "https://github.com/hsivonen/rust-url", rev = "fabcb3fe7da187066b26e681246f8ac8d8e4d0db" }
+percent-encoding = { git = "https://github.com/hsivonen/rust-url", rev = "fabcb3fe7da187066b26e681246f8ac8d8e4d0db" }
 icu_collections = { git = "https://github.com/hsivonen/icu4x", rev = "d18887ceaf05c2075e73a6d7f9db2af1be1a116c" }
 icu_locid = { git = "https://github.com/hsivonen/icu4x", rev = "d18887ceaf05c2075e73a6d7f9db2af1be1a116c" }
 icu_locid_transform = { git = "https://github.com/hsivonen/icu4x", rev = "d18887ceaf05c2075e73a6d7f9db2af1be1a116c" }

@@ -13,7 +13,7 @@ use std::fmt::Write;
 use idna::uts46::verify_dns_length;
 use idna::uts46::ProcessingError;
 use idna::uts46::ProcessingSuccess;
-use idna::uts46::{ErrorPolicy, Strictness};
+use idna::uts46::{AsciiDenyList, DnsLength, ErrorPolicy, Hyphens};
 use idna::Errors;
 
 pub fn collect_tests<F: FnMut(String, TestFn)>(add_test: &mut F) {
@@ -53,7 +53,7 @@ pub fn collect_tests<F: FnMut(String, TestFn)>(add_test: &mut F) {
             status(to_ascii_n_status)
         };
 
-        let test_name = format!("UTS #46 bis line {}", i + 1);
+        let test_name = format!("UTS #46 line {}", i + 1);
         add_test(
             test_name,
             TestFn::DynTestFn(Box::new(move || {
@@ -73,7 +73,7 @@ pub fn collect_tests<F: FnMut(String, TestFn)>(add_test: &mut F) {
                 // This is not implemented yet, so we skip toUnicode X4_2 tests for now, too.
 
                 let (to_unicode_value, to_unicode_result) =
-                    config.to_unicode(source.as_bytes(), Strictness::Std3ConformanceChecker);
+                    config.to_unicode(source.as_bytes(), AsciiDenyList::STD3, Hyphens::Check);
                 let to_unicode_result = to_unicode_result.map(|()| to_unicode_value.into_owned());
                 check(
                     &source,
@@ -82,13 +82,17 @@ pub fn collect_tests<F: FnMut(String, TestFn)>(add_test: &mut F) {
                     |e| e == "X4_2",
                 );
 
-                let to_ascii_n_result =
-                    config.to_ascii(source.as_bytes(), Strictness::Std3ConformanceChecker);
+                let to_ascii_n_result = config.to_ascii(
+                    source.as_bytes(),
+                    AsciiDenyList::STD3,
+                    Hyphens::Check,
+                    DnsLength::Verify,
+                );
                 check(
                     &source,
                     (&to_ascii_n, &to_ascii_n_status),
                     to_ascii_n_result.map(|cow| cow.into_owned()),
-                    |e| false,
+                    |_| false,
                 );
 
                 let mut to_unicode_simultaneous = String::new();
@@ -96,7 +100,8 @@ pub fn collect_tests<F: FnMut(String, TestFn)>(add_test: &mut F) {
                 let (to_unicode_simultaneous_result, to_ascii_simultaneous_result) = match config
                     .process(
                         source.as_bytes(),
-                        Strictness::Std3ConformanceChecker,
+                        AsciiDenyList::STD3,
+                        Hyphens::Check,
                         ErrorPolicy::MarkErrors,
                         |_, _, _| true,
                         &mut to_unicode_simultaneous,
@@ -146,7 +151,7 @@ pub fn collect_tests<F: FnMut(String, TestFn)>(add_test: &mut F) {
                     &source,
                     (&to_ascii_n, &to_ascii_n_status),
                     to_ascii_simultaneous_result,
-                    |e| false,
+                    |_| false,
                 );
             })),
         )

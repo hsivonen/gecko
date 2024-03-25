@@ -6,15 +6,63 @@
 // option. This file may not be copied, modified, or distributed
 // except according to those terms.
 
-//! [*Unicode IDNA Compatibility Processing*
+//! Deprecated API for [*Unicode IDNA Compatibility Processing*
 //! (Unicode Technical Standard #46)](http://www.unicode.org/reports/tr46/)
 
 #![allow(deprecated)]
 
+use alloc::borrow::Cow;
 use alloc::string::String;
 
 use crate::uts46::*;
 use crate::Errors;
+
+/// Performs preprocessing equivalent to UTS 46 transitional processing
+/// if `transitional` is `true`. If `transitional` is `false`, merely
+/// lets the input pass through as-is.
+///
+/// The output of this function is to be passed to [`Uts46::process`].
+///
+/// Deprecated, since this functionality is deprecated in UTS 46 itself,
+/// and none of Firefox, Safari, or Chrome use transitional processing.
+#[deprecated]
+fn map_transitional(domain: &str, transitional: bool) -> Cow<'_, str> {
+    if transitional {
+        let mut chars = domain.chars();
+        loop {
+            let prev = chars.clone();
+            if let Some(c) = chars.next() {
+                match c {
+                    'ß' | 'ẞ' | 'ς' | '\u{200C}' | '\u{200D}' => {
+                        let mut s = String::with_capacity(domain.len());
+                        let tail = prev.as_str();
+                        let head = &domain[..domain.len() - tail.len()];
+                        s.push_str(head);
+                        for c in tail.chars() {
+                            match c {
+                                'ß' | 'ẞ' => {
+                                    s.push_str("ss");
+                                }
+                                'ς' => {
+                                    s.push('σ');
+                                }
+                                '\u{200C}' | '\u{200D}' => {}
+                                _ => {
+                                    s.push(c);
+                                }
+                            }
+                        }
+                        return Cow::Owned(s);
+                    }
+                    _ => {}
+                }
+            } else {
+                break;
+            }
+        }
+    }
+    Cow::Borrowed(domain)
+}
 
 /// Deprecated. Use the crate-top-level functions or [`Uts46`].
 #[derive(Default)]
@@ -31,19 +79,21 @@ impl Idna {
     /// [UTS 46 ToASCII](http://www.unicode.org/reports/tr46/#ToASCII)
     #[allow(clippy::wrong_self_convention)]
     pub fn to_ascii(&mut self, domain: &str, out: &mut String) -> Result<(), Errors> {
+        let mapped = map_transitional(domain, self.config.transitional_processing);
         match Uts46::new().process(
-            domain.as_bytes(),
-            self.config.strictness(),
+            mapped.as_bytes(),
+            self.config.deny_list(),
+            self.config.hyphens(),
             ErrorPolicy::FailFast,
             |_, _, _| false,
             out,
             None,
         ) {
             Ok(ProcessingSuccess::Passthrough) => {
-                if self.config.verify_dns_length && !verify_dns_length(domain) {
+                if self.config.verify_dns_length && !verify_dns_length(&mapped) {
                     return Err(crate::Errors::default());
                 }
-                out.push_str(domain);
+                out.push_str(&mapped);
                 Ok(())
             }
             Ok(ProcessingSuccess::WroteToSink) => {
@@ -60,16 +110,18 @@ impl Idna {
     /// [UTS 46 ToUnicode](http://www.unicode.org/reports/tr46/#ToUnicode)
     #[allow(clippy::wrong_self_convention)]
     pub fn to_unicode(&mut self, domain: &str, out: &mut String) -> Result<(), Errors> {
+        let mapped = map_transitional(domain, self.config.transitional_processing);
         match Uts46::new().process(
-            domain.as_bytes(),
-            self.config.strictness(),
+            mapped.as_bytes(),
+            self.config.deny_list(),
+            self.config.hyphens(),
             ErrorPolicy::MarkErrors,
             |_, _, _| true,
             out,
             None,
         ) {
             Ok(ProcessingSuccess::Passthrough) => {
-                out.push_str(domain);
+                out.push_str(&mapped);
                 Ok(())
             }
             Ok(ProcessingSuccess::WroteToSink) => Ok(()),
@@ -85,6 +137,7 @@ impl Idna {
 #[deprecated]
 pub struct Config {
     use_std3_ascii_rules: bool,
+    transitional_processing: bool,
     verify_dns_length: bool,
     check_hyphens: bool,
 }
@@ -94,6 +147,7 @@ impl Default for Config {
     fn default() -> Self {
         Config {
             use_std3_ascii_rules: false,
+            transitional_processing: false,
             check_hyphens: false,
             // Only use for to_ascii, not to_unicode
             verify_dns_length: false,
@@ -104,26 +158,23 @@ impl Default for Config {
 impl Config {
     /// Whether to enforce STD3 or WHATWG URL Standard ASCII deny list.
     ///
-    /// `true` for STD3, `false` for WHATWG.
+    /// `true` for STD3, `false` for no deny list.
     ///
     /// Note that `true` rejects pseudo-hosts used by various TXT record-based protocols.
-    ///
-    /// Must be set to the same value as [`Config::check_hyphens`].
     #[inline]
     pub fn use_std3_ascii_rules(mut self, value: bool) -> Self {
         self.use_std3_ascii_rules = value;
         self
     }
 
-    /// Obsolete method retained to ease migration. The argument must be `false`.
+    /// Whether to enable (deprecated) transitional processing.
     ///
-    /// Panics
-    ///
-    /// If the argument is `true`.
+    /// Note that Firefox, Safari, and Chrome do not use transitional
+    /// processing.
     #[inline]
     #[allow(unused_mut)]
     pub fn transitional_processing(mut self, value: bool) -> Self {
-        assert!(!value, "Transitional processing is no longer supported");
+        self.transitional_processing = value;
         self
     }
 
@@ -142,8 +193,6 @@ impl Config {
     ///
     /// Note that `true` rejects real-world names, including YouTube CDN nodes
     /// and some GitHub user pages.
-    ///
-    /// Must be set to the same value as [`Config::use_std3_ascii_rules`].
     #[inline]
     pub fn check_hyphens(mut self, value: bool) -> Self {
         self.check_hyphens = value;
@@ -162,13 +211,21 @@ impl Config {
         self
     }
 
-    /// Compute strictness
-    fn strictness(&self) -> Strictness {
-        assert_eq!(self.check_hyphens, self.use_std3_ascii_rules, "Setting check_hyphens and use_std3_ascii_rules to different values is no longer supported");
+    /// Compute the deny list
+    fn deny_list(&self) -> AsciiDenyList {
         if self.use_std3_ascii_rules {
-            Strictness::Std3ConformanceChecker
+            AsciiDenyList::STD3
         } else {
-            Strictness::WhatwgUserAgent
+            AsciiDenyList::EMPTY
+        }
+    }
+
+    /// Compute the hyphen mode
+    fn hyphens(&self) -> Hyphens {
+        if self.check_hyphens {
+            Hyphens::Check
+        } else {
+            Hyphens::Allow
         }
     }
 

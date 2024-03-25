@@ -29,6 +29,8 @@
 #include "nsServiceManagerUtils.h"
 #include "nsString.h"
 #include "nsTArray.h"
+#include "mozilla/net/idna_glue.h"
+#include "mozilla/net/MozURL_ffi.h"
 
 class nsIPrincipal;
 class nsIAsyncStreamCopier;
@@ -297,8 +299,39 @@ int32_t NS_GetDefaultPort(const char* scheme,
  * The UTS #46 ToASCII operation as parametrized by the WHATWG URL Standard.
  *
  * Use this function to prepare a host name for network protocols.
+ *
+ * Do not try to optimize and avoid calling this function if you already
+ * have ASCII. This function optimizes internally, and calling it is
+ * required for correctness!
+ *
+ * Use `NS_DomainToDisplayAndASCII` if you need both this function and
+ * `NS_DomainToDisplay` together.
+ *
+ * The function is available to privileged JavaScript callers via
+ * nsIIDNService.
+ *
+ * Rust callers that don't happen to be using XPCOM strings are better
+ * off using the `idna` crate directly.
  */
-nsresult NS_DomainToASCII(const nsACString& aHost, nsACString& aASCII);
+inline nsresult NS_DomainToASCII(const nsACString& aDomain, nsACString& aASCII) {
+  return mozilla_net_domain_to_ascii_impl(&aDomain, &aASCII);
+}
+
+/**
+ * As above, but allow IPv6 addresses.
+ */
+inline nsresult NS_IPv6OrDomainToASCII(const nsACString& aDomain, nsACString& aASCII) {
+  if (aDomain.IsEmpty()) {
+    return NS_OK;
+  }
+  if (aDomain.First() == '[') {
+    if (NS_FAILED(rusturl_parse_ipv6addr(&aDomain, &aASCII))) {
+      return NS_ERROR_MALFORMED_URI;
+    }
+    return NS_OK;
+  }
+  return mozilla_net_domain_to_ascii_impl(&aDomain, &aASCII);
+}
 
 /**
  * The UTS #46 ToUnicode operation as parametrized by the WHATWG URL Standard,
@@ -306,16 +339,37 @@ nsresult NS_DomainToASCII(const nsACString& aHost, nsACString& aASCII);
  * instead.
  *
  * Use this function to prepare a host name for display to the user.
+ *
+ * Use `NS_DomainToDisplayAndASCII` if you need both this function and
+ * `NS_DomainToASCII` together.
+ *
+ * The function is available to privileged JavaScript callers via
+ * nsIIDNService.
+ *
+ * Rust callers that don't happen to be using XPCOM strings are better
+ * off using the `idna` crate directly. (See `idna_glue` for what policy
+ * closure to use.)
  */
-nsresult NS_DomainToDisplay(const nsACString& aHost, nsACString& aDisplay);
+inline nsresult NS_DomainToDisplay(const nsACString& aDomain, nsACString& aDisplay) {
+  return mozilla_net_domain_to_display_impl(&aDomain, &aDisplay);
+}
 
 /**
  * The UTS #46 ToUnicode operation as parametrized by the WHATWG URL Standard.
  *
- * It's most likely incorrect to call this function, and `NS_DomainToDisplay`
- * should typically be called instead.
+ * It's most likely INCORRECT to call this function, and `NS_DomainToDisplay`
+ * should typically be called instead. Please avoid adding new callers, so
+ * that this conversion could be removed entirely!
+ *
+ * The function is available to privileged JavaScript callers via
+ * nsIIDNService.
+ *
+ * Rust callers that don't happen to be using XPCOM strings are better
+ * off using the `idna` crate directly.
  */
-nsresult NS_DomainToUnicode(const nsACString& aHost, nsACString& aUnicode);
+inline nsresult NS_DomainToUnicode(const nsACString& aDomain, nsACString& aUnicode) {
+  return mozilla_net_domain_to_display_impl(&aDomain, &aUnicode);
+}
 
 /**
  * This function is a helper function to get a protocol's default port if the

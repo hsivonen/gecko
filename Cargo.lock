@@ -136,6 +136,15 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "a4c527152e37cf757a3f78aae5a06fbeefdb07ccc535c980a3208ee3060dd544"
 
 [[package]]
+name = "arraystring"
+version = "0.3.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "4d517c467117e1d8ca795bc8cc90857ff7f79790cca0e26f6e9462694ece0185"
+dependencies = [
+ "typenum",
+]
+
+[[package]]
 name = "arrayvec"
 version = "0.7.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -1951,7 +1960,7 @@ checksum = "aa9a19cbb55df58761df49b23516a86d432839add4af60fc256da840f66ed35b"
 [[package]]
 name = "form_urlencoded"
 version = "1.2.1"
-source = "git+https://github.com/hsivonen/rust-url?rev=3c378387caa546d28948410d736d0fd05a816adf#3c378387caa546d28948410d736d0fd05a816adf"
+source = "git+https://github.com/hsivonen/rust-url?rev=fabcb3fe7da187066b26e681246f8ac8d8e4d0db#fabcb3fe7da187066b26e681246f8ac8d8e4d0db"
 dependencies = [
  "percent-encoding",
 ]
@@ -2267,6 +2276,7 @@ dependencies = [
  "geckoservo",
  "gkrust_utils",
  "http_sfv",
+ "idna_glue",
  "jog",
  "jsrust_shared",
  "kvstore",
@@ -2737,7 +2747,7 @@ dependencies = [
  "icu_provider",
  "icu_provider_adapters",
  "icu_segmenter",
- "tinystr 0.7.4",
+ "tinystr",
  "writeable",
 ]
 
@@ -2759,7 +2769,7 @@ source = "git+https://github.com/hsivonen/icu4x?rev=d18887ceaf05c2075e73a6d7f9db
 dependencies = [
  "displaydoc",
  "litemap",
- "tinystr 0.7.5",
+ "tinystr",
  "writeable",
  "zerovec",
 ]
@@ -2773,7 +2783,7 @@ dependencies = [
  "icu_locid",
  "icu_locid_transform_data",
  "icu_provider",
- "tinystr 0.7.5",
+ "tinystr",
  "zerovec",
 ]
 
@@ -2814,7 +2824,7 @@ dependencies = [
  "icu_locid_transform",
  "icu_properties_data",
  "icu_provider",
- "tinystr 0.7.5",
+ "tinystr",
  "unicode-bidi",
  "zerovec",
 ]
@@ -2833,7 +2843,7 @@ dependencies = [
  "icu_locid",
  "icu_provider_macros",
  "stable_deref_trait",
- "tinystr 0.7.5",
+ "tinystr",
  "writeable",
  "yoke",
  "zerofrom",
@@ -2849,7 +2859,7 @@ dependencies = [
  "icu_locid",
  "icu_locid_transform",
  "icu_provider",
- "tinystr 0.7.4",
+ "tinystr",
  "zerovec",
 ]
 
@@ -2898,12 +2908,23 @@ checksum = "b9e0384b61958566e926dc50660321d12159025e767c18e043daf26b70104c39"
 [[package]]
 name = "idna"
 version = "0.5.0"
-source = "git+https://github.com/hsivonen/rust-url?rev=3c378387caa546d28948410d736d0fd05a816adf#3c378387caa546d28948410d736d0fd05a816adf"
+source = "git+https://github.com/hsivonen/rust-url?rev=fabcb3fe7da187066b26e681246f8ac8d8e4d0db#fabcb3fe7da187066b26e681246f8ac8d8e4d0db"
 dependencies = [
  "icu_normalizer",
  "icu_properties",
  "smallvec",
  "utf8_iter",
+]
+
+[[package]]
+name = "idna_glue"
+version = "0.1.0"
+dependencies = [
+ "arraystring",
+ "idna",
+ "nserror",
+ "nsstring",
+ "percent-encoding",
 ]
 
 [[package]]
@@ -4393,7 +4414,7 @@ dependencies = [
 [[package]]
 name = "percent-encoding"
 version = "2.3.1"
-source = "git+https://github.com/hsivonen/rust-url?rev=3c378387caa546d28948410d736d0fd05a816adf#3c378387caa546d28948410d736d0fd05a816adf"
+source = "git+https://github.com/hsivonen/rust-url?rev=fabcb3fe7da187066b26e681246f8ac8d8e4d0db#fabcb3fe7da187066b26e681246f8ac8d8e4d0db"
 
 [[package]]
 name = "phf"
@@ -5745,16 +5766,6 @@ dependencies = [
 
 [[package]]
 name = "tinystr"
-version = "0.7.4"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "d5d0e245e80bdc9b4e5356fc45a72184abbc3861992603f515270e9340f5a219"
-dependencies = [
- "displaydoc",
- "zerovec",
-]
-
-[[package]]
-name = "tinystr"
 version = "0.7.5"
 source = "git+https://github.com/hsivonen/icu4x?rev=d18887ceaf05c2075e73a6d7f9db2af1be1a116c#d18887ceaf05c2075e73a6d7f9db2af1be1a116c"
 dependencies = [
@@ -5956,7 +5967,7 @@ version = "0.9.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "e35bfd2f2b8796545b55d7d3fd3e89a0613f68a0d1c8bc28cb7ff96b411a35ff"
 dependencies = [
- "tinystr 0.7.4",
+ "tinystr",
 ]
 
 [[package]]
@@ -6235,7 +6246,7 @@ checksum = "2ace0b4755d0a2959962769239d56267f8a024fef2d9b32666b3dcd0946b0906"
 [[package]]
 name = "url"
 version = "2.5.0"
-source = "git+https://github.com/hsivonen/rust-url?rev=3c378387caa546d28948410d736d0fd05a816adf#3c378387caa546d28948410d736d0fd05a816adf"
+source = "git+https://github.com/hsivonen/rust-url?rev=fabcb3fe7da187066b26e681246f8ac8d8e4d0db#fabcb3fe7da187066b26e681246f8ac8d8e4d0db"
 dependencies = [
  "form_urlencoded",
  "idna",

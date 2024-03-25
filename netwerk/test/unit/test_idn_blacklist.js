@@ -136,11 +136,10 @@ function run_test() {
     var test = testcases[j];
     var URL = test[0] + ".com";
     var punycodeURL = test[1] + ".com";
-    var isASCII = {};
 
     var result;
     try {
-      result = idnService.convertToDisplayIDN(URL, isASCII);
+      result = idnService.convertToDisplayIDN(URL);
     } catch (e) {
       result = ".com";
     }
@@ -153,7 +152,7 @@ function run_test() {
         //  Punycode URL if we have one
         equal(escape(result), escape(punycodeURL));
 
-        result = idnService.convertToDisplayIDN(punycodeURL, isASCII);
+        result = idnService.convertToDisplayIDN(punycodeURL);
         equal(escape(result), escape(punycodeURL));
       } else {
         // The "punycode" URL isn't punycode. This happens in testcases

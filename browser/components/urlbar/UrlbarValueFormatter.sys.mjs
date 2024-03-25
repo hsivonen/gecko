@@ -332,6 +332,7 @@ export class UrlbarValueFormatter {
         let IDNService = Cc["@mozilla.org/network/idn-service;1"].getService(
           Ci.nsIIDNService
         );
+        // XXX This should probably convent to display IDN instead.
         baseDomain = IDNService.convertACEtoUTF8(baseDomain);
       }
     } catch (e) {}

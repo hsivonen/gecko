@@ -32,6 +32,30 @@
 #include "mozilla/Utf8.h"
 #include "nsIClassInfoImpl.h"
 #include <string.h>
+#include "mozilla/net/idna_glue.h"
+
+/**
+ * The UTS #46 ToUnicode operation as parametrized by the WHATWG URL Standard,
+ * except potentially misleading labels are treated according to ToASCII
+ * instead. Combined with the ToASCII operation without rerunning the expensive
+ * part.
+ *
+ * PERCENT-DECODES INPUT unlike the other NS_DomainTo functions!
+ *
+ * If upon successfull return `aASCII` is empty, it is the caller's
+ * responsibility to treat the value of `aDisplay` also as the value of
+ * `aASCII`. (The weird semantics avoid useless allocation / copying.)
+ *
+ * Rust callers that don't happen to be using XPCOM strings are better
+ * off using the `idna` crate directly. (See `idna_glue` for what policy
+ * closure to use.)
+ */
+static nsresult NS_DomainToDisplayAndASCII(const nsACString& aDomain,
+                                           nsACString& aDisplay,
+                                           nsACString& aASCII) {
+  return mozilla_net_domain_to_display_and_ascii_impl(&aDomain, &aDisplay,
+                                                      &aASCII);
+}
 
 //
 // setenv MOZ_LOG nsStandardURL:5
@@ -59,28 +83,6 @@ StaticRefPtr<nsIIDNService> nsStandardURL::gIDN;
 static Atomic<bool, Relaxed> gInitialized{false};
 
 const char nsStandardURL::gHostLimitDigits[] = {'/', '\\', '?', '#', 0};
-
-// Invalid host characters
-// Note that the array below will be initialized at compile time,
-// so we do not need to "optimize" TestForInvalidHostCharacters.
-//
-constexpr bool TestForInvalidHostCharacters(char c) {
-  // Testing for these:
-  // CONTROL_CHARACTERS " #/:?@[\\]*<>|\"";
-  return (c > 0 && c < 32) ||  // The control characters are [1, 31]
-         c == 0x7F ||          // // DEL (delete)
-         c == ' ' || c == '#' || c == '/' || c == ':' || c == '?' || c == '@' ||
-         c == '[' || c == '\\' || c == ']' || c == '*' || c == '<' ||
-         c == '^' ||
-#if defined(MOZ_THUNDERBIRD) || defined(MOZ_SUITE)
-         // Mailnews %-escapes file paths into URLs.
-         c == '>' || c == '|' || c == '"';
-#else
-         c == '>' || c == '|' || c == '"' || c == '%';
-#endif
-}
-constexpr ASCIIMaskArray sInvalidHostChars =
-    CreateASCIIMask(TestForInvalidHostCharacters);
 
 //----------------------------------------------------------------------------
 // nsStandardURL::nsSegmentEncoder
@@ -625,74 +627,19 @@ nsresult nsStandardURL::NormalizeIPv4(const nsACString& host,
 nsIIDNService* nsStandardURL::GetIDNService() { return gIDN.get(); }
 
 nsresult nsStandardURL::NormalizeIDN(const nsCString& host, nsCString& result) {
-  result.Truncate();
   mDisplayHost.Truncate();
-  nsresult rv;
-
-  if (!gIDN) {
-    return NS_ERROR_UNEXPECTED;
-  }
-
-  // Even if it's already ACE, we must still call ConvertUTF8toACE in order
-  // for the input normalization to take place.
-  rv = gIDN->ConvertUTF8toACE(host, result);
-  if (NS_FAILED(rv)) {
-    return rv;
-  }
-
-  // If the ASCII representation doesn't contain the xn-- token then we don't
-  // need to call ConvertToDisplayIDN as that would not change anything.
-  if (!StringBeginsWith(result, "xn--"_ns) &&
-      result.Find(".xn--"_ns) == kNotFound) {
-    mCheckedIfHostA = true;
-    return NS_OK;
-  }
-
-  bool isAscii = true;
-  nsAutoCString displayHost;
-  rv = gIDN->ConvertToDisplayIDN(result, &isAscii, displayHost);
-  if (NS_FAILED(rv)) {
-    return rv;
-  }
-
   mCheckedIfHostA = true;
-  if (!isAscii) {
+  nsAutoCString displayHost;
+  nsresult rv = NS_DomainToDisplayAndASCII(host, displayHost, result);
+  if (NS_FAILED(rv)) {
+    return rv;
+  }
+  if (result.IsEmpty()) {
+    result.Assign(displayHost);
+  } else {
     mDisplayHost = displayHost;
   }
   return NS_OK;
-}
-
-bool nsStandardURL::ValidIPv6orHostname(const char* host, uint32_t length) {
-  if (!host || !*host) {
-    // Should not be NULL or empty string
-    return false;
-  }
-
-  if (length != strlen(host)) {
-    // Embedded null
-    return false;
-  }
-
-  bool openBracket = host[0] == '[';
-  bool closeBracket = host[length - 1] == ']';
-
-  if (openBracket && closeBracket) {
-    return net_IsValidIPv6Addr(Substring(host + 1, length - 2));
-  }
-
-  if (openBracket || closeBracket) {
-    // Fail if only one of the brackets is present
-    return false;
-  }
-
-  const char* end = host + length;
-  const char* iter = host;
-  for (; iter != end && *iter; ++iter) {
-    if (ASCIIMask::IsMasked(sInvalidHostChars, *iter)) {
-      return false;
-    }
-  }
-  return true;
 }
 
 void nsStandardURL::CoalescePath(netCoalesceFlags coalesceFlag, char* path) {
@@ -894,48 +841,34 @@ nsresult nsStandardURL::BuildNormalizedSpec(const char* spec,
   // However, perform Unicode normalization on it, as IDN does.
   // Note that we don't disallow URLs without a host - file:, etc
   if (mHost.mLen > 0) {
-    nsAutoCString tempHost;
-    NS_UnescapeURL(spec + mHost.mPos, mHost.mLen, esc_AlwaysCopy | esc_Host,
-                   tempHost);
-    if (tempHost.Contains('\0')) {
-      return NS_ERROR_MALFORMED_URI;  // null embedded in hostname
-    }
-    if (tempHost.Contains(' ')) {
-      return NS_ERROR_MALFORMED_URI;  // don't allow spaces in the hostname
-    }
-    nsresult rv = NormalizeIDN(tempHost, encHost);
-    if (NS_FAILED(rv)) {
-      return rv;
-    }
-    if (!SegmentIs(spec, mScheme, "resource") &&
-        !SegmentIs(spec, mScheme, "chrome")) {
-      nsAutoCString ipString;
-      if (encHost.Length() > 0 && encHost.First() == '[' &&
-          encHost.Last() == ']' &&
-          ValidIPv6orHostname(encHost.get(), encHost.Length())) {
-        rv = (nsresult)rusturl_parse_ipv6addr(&encHost, &ipString);
+    nsDependentCString tempHost(spec + mHost.mPos, mHost.mLen);
+    bool allowIp = !SegmentIs(spec, mScheme, "resource") &&
+                   !SegmentIs(spec, mScheme, "chrome");
+    nsresult rv;
+    if (tempHost.First() == '[' && allowIp) {
+      mCheckedIfHostA = true;
+      rv = (nsresult)rusturl_parse_ipv6addr(&tempHost, &encHost);
+      if (NS_FAILED(rv)) {
+        return rv;
+      }
+    } else {
+      rv = NormalizeIDN(tempHost, encHost);
+      if (NS_FAILED(rv)) {
+        return rv;
+      }
+      if (EndsInANumber(encHost) && allowIp) {
+        nsAutoCString ipString;
+        rv = NormalizeIPv4(encHost, ipString);
         if (NS_FAILED(rv)) {
           return rv;
         }
         encHost = ipString;
-      } else {
-        if (EndsInANumber(encHost)) {
-          rv = NormalizeIPv4(encHost, ipString);
-          if (NS_FAILED(rv)) {
-            return rv;
-          }
-          encHost = ipString;
-        }
       }
     }
 
     // NormalizeIDN always copies, if the call was successful.
     useEncHost = true;
     approxLen += encHost.Length();
-
-    if (!ValidIPv6orHostname(encHost.BeginReading(), encHost.Length())) {
-      return NS_ERROR_MALFORMED_URI;
-    }
   } else {
     // empty host means empty mDisplayHost
     mDisplayHost.Truncate();
@@ -1009,7 +942,6 @@ nsresult nsStandardURL::BuildNormalizedSpec(const char* spec,
                            &diff);
     ShiftFromPath(diff);
 
-    net_ToLowerCase(buf + mHost.mPos, mHost.mLen);
     MOZ_ASSERT(mPort >= -1, "Invalid negative mPort");
     if (mPort != -1 && mPort != mDefaultPort) {
       buf[i++] = ':';
@@ -1530,20 +1462,15 @@ nsresult nsStandardURL::CheckIfHostIsAscii() {
 
   mCheckedIfHostA = true;
 
-  if (!gIDN) {
-    return NS_ERROR_NOT_INITIALIZED;
-  }
-
   nsAutoCString displayHost;
-  bool isAscii;
-  rv = gIDN->ConvertToDisplayIDN(Host(), &isAscii, displayHost);
+  rv = NS_DomainToDisplay(Host(), displayHost);
   if (NS_FAILED(rv)) {
     mDisplayHost.Truncate();
-    mCheckedIfHostA = false;
+    mCheckedIfHostA = false; // XXX Why?
     return rv;
   }
 
-  if (!isAscii) {
+  if (!mozilla::IsAscii(displayHost)) {
     mDisplayHost = displayHost;
   }
 
@@ -1766,7 +1693,7 @@ nsresult nsStandardURL::SetSpecWithEncoding(const nsACString& input,
   }
 
   // Make sure that a URLTYPE_AUTHORITY has a non-empty hostname.
-  if (mURLType == URLTYPE_AUTHORITY && mHost.mLen == -1) {
+  if (mURLType == URLTYPE_AUTHORITY && mHost.mLen <= 0) {
     rv = NS_ERROR_MALFORMED_URI;
   }
 
@@ -2198,78 +2125,54 @@ nsresult nsStandardURL::SetHost(const nsACString& input) {
 
   FindHostLimit(start, end);
 
-  // Do percent decoding on the the input.
-  nsAutoCString flat;
-  NS_UnescapeURL(hostname.BeginReading(), end - start,
-                 esc_AlwaysCopy | esc_Host, flat);
-  const char* host = flat.get();
+  hostname.Truncate(end - start);
 
-  LOG(("nsStandardURL::SetHost [host=%s]\n", host));
+  LOG(("nsStandardURL::SetHost [host=%s]\n", hostname.get()));
 
   if (mURLType == URLTYPE_NO_AUTHORITY) {
-    if (flat.IsEmpty()) {
+    if (hostname.IsEmpty()) {
       return NS_OK;
     }
     NS_WARNING("cannot set host on no-auth url");
     return NS_ERROR_UNEXPECTED;
   }
-  if (flat.IsEmpty()) {
+  if (hostname.IsEmpty()) {
     // Setting an empty hostname is not allowed for
     // URLTYPE_STANDARD and URLTYPE_AUTHORITY.
     return NS_ERROR_UNEXPECTED;
   }
 
-  if (strlen(host) < flat.Length()) {
-    return NS_ERROR_MALFORMED_URI;  // found embedded null
-  }
-
-  // For consistency with SetSpec/nsURLParsers, don't allow spaces
-  // in the hostname.
-  if (strchr(host, ' ')) {
-    return NS_ERROR_MALFORMED_URI;
-  }
-
-  if (mSpec.Length() + strlen(host) - Host().Length() >
-      StaticPrefs::network_standard_url_max_length()) {
-    return NS_ERROR_MALFORMED_URI;
-  }
-
   auto onExitGuard = MakeScopeExit([&] { SanityCheck(); });
   InvalidateCache();
 
-  uint32_t len;
-  nsAutoCString hostBuf;
-  nsresult rv = NormalizeIDN(flat, hostBuf);
-  if (NS_FAILED(rv)) {
-    return rv;
-  }
+  bool allowIp =
+      !SegmentIs(mScheme, "resource") && !SegmentIs(mScheme, "chrome");
 
-  if (!SegmentIs(mScheme, "resource") && !SegmentIs(mScheme, "chrome")) {
-    nsAutoCString ipString;
-    if (hostBuf.Length() > 0 && hostBuf.First() == '[' &&
-        hostBuf.Last() == ']' &&
-        ValidIPv6orHostname(hostBuf.get(), hostBuf.Length())) {
-      rv = (nsresult)rusturl_parse_ipv6addr(&hostBuf, &ipString);
+  nsAutoCString hostBuf;
+  nsresult rv;
+  if (hostname.First() == '[' && allowIp) {
+    mCheckedIfHostA = true;
+    rv = rusturl_parse_ipv6addr(&hostname, &hostBuf);
+    if (NS_FAILED(rv)) {
+      return rv;
+    }
+  } else {
+    rv = NormalizeIDN(hostname, hostBuf);
+    if (NS_FAILED(rv)) {
+      return rv;
+    }
+    if (EndsInANumber(hostBuf) && allowIp) {
+      nsAutoCString ipString;
+      rv = NormalizeIPv4(hostBuf, ipString);
       if (NS_FAILED(rv)) {
         return rv;
       }
       hostBuf = ipString;
-    } else {
-      if (EndsInANumber(hostBuf)) {
-        rv = NormalizeIPv4(hostBuf, ipString);
-        if (NS_FAILED(rv)) {
-          return rv;
-        }
-        hostBuf = ipString;
-      }
     }
   }
 
-  // NormalizeIDN always copies if the call was successful
-  host = hostBuf.get();
-  len = hostBuf.Length();
-
-  if (!ValidIPv6orHostname(host, len)) {
+  if (mSpec.Length() + hostBuf.Length() - Host().Length() >
+      StaticPrefs::network_standard_url_max_length()) {
     return NS_ERROR_MALFORMED_URI;
   }
 
@@ -2290,7 +2193,10 @@ nsresult nsStandardURL::SetHost(const nsACString& input) {
     }
   }
 
-  int32_t shift = ReplaceSegment(mHost.mPos, mHost.mLen, host, len);
+  uint32_t len = hostBuf.Length();
+  // NormalizeIDN always copies if the call was successful
+  int32_t shift =
+      ReplaceSegment(mHost.mPos, mHost.mLen, hostBuf.BeginReading(), len);
 
   if (shift) {
     mHost.mLen = len;
@@ -2298,8 +2204,6 @@ nsresult nsStandardURL::SetHost(const nsACString& input) {
     ShiftFromPath(shift);
   }
 
-  // Now canonicalize the host to lowercase
-  net_ToLowerCase(mSpec.BeginWriting() + mHost.mPos, mHost.mLen);
   return NS_OK;
 }
 

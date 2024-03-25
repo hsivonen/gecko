@@ -259,7 +259,6 @@ class nsStandardURL : public nsIFileURL,
   void Clear();
   void InvalidateCache(bool invalidateCachedFile = true);
 
-  bool ValidIPv6orHostname(const char* host, uint32_t length);
   static bool IsValidOfBase(unsigned char c, const uint32_t base);
   nsresult NormalizeIDN(const nsCString& host, nsCString& result);
   nsresult CheckIfHostIsAscii();
