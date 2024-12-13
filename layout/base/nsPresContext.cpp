@@ -2935,7 +2935,7 @@ void nsPresContext::NotifyContentfulPaint() {
               int(elapsed.ToMilliseconds()),
               nsContentUtils::TruncatedURLForDisplay(docURI).get());
           PROFILER_MARKER_TEXT(
-              "FirstContentfulPaint", DOM,
+              "FirstContentfulPaint", NAVIGATION,
               MarkerOptions(
                   MarkerTiming::Interval(navigationStart, nowTime),
                   MarkerInnerWindowId(mDocument->GetInnerWindow()->WindowID())),

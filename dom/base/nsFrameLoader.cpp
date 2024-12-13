@@ -1420,6 +1420,17 @@ class MOZ_RAII AutoResetInFrameSwap final {
         mOtherDocShell(aOtherDocShell),
         mThisEventTarget(aThisEventTarget),
         mOtherEventTarget(aOtherEventTarget) {
+    PROFILER_MARKER(
+        "FrameLoaderSwap", NAVIGATION,
+        MarkerOptions(MarkerTiming::IntervalStart(),
+                      MarkerInnerWindowIdFromDocShell(mThisDocShell)),
+        Tracing, "Navigation");
+    PROFILER_MARKER(
+        "FrameLoaderSwap", NAVIGATION,
+        MarkerOptions(MarkerTiming::IntervalStart(),
+                      MarkerInnerWindowIdFromDocShell(mOtherDocShell)),
+        Tracing, "Navigation");
+
     mThisFrameLoader->mInSwap = true;
     mOtherFrameLoader->mInSwap = true;
     mThisDocShell->SetInFrameSwap(true);
@@ -1448,6 +1459,17 @@ class MOZ_RAII AutoResetInFrameSwap final {
     mOtherFrameLoader->mInSwap = false;
     mThisDocShell->SetInFrameSwap(false);
     mOtherDocShell->SetInFrameSwap(false);
+
+    PROFILER_MARKER(
+        "FrameLoaderSwap", NAVIGATION,
+        MarkerOptions(MarkerTiming::IntervalEnd(),
+                      MarkerInnerWindowIdFromDocShell(mThisDocShell)),
+        Tracing, "Navigation");
+    PROFILER_MARKER(
+        "FrameLoaderSwap", NAVIGATION,
+        MarkerOptions(MarkerTiming::IntervalEnd(),
+                      MarkerInnerWindowIdFromDocShell(mOtherDocShell)),
+        Tracing, "Navigation");
 
     // This is needed to get visibility state right in cases when we swapped a
     // visible tab (foreground in visible window) with a non-visible tab.

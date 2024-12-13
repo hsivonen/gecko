@@ -177,6 +177,13 @@
     - name: GCCC_Finalize
       label: CC (Finalize)
 
+- name: NAVIGATION
+  label: Navigation
+  color: lightblue
+  subcategories:
+    - name: NAVIGATION
+      label: Other
+
 - name: NETWORK
   label: Network
   color: lightblue

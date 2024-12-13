@@ -3126,7 +3126,21 @@ nsDocShell::GoBack(bool aRequireUserInteraction, bool aUserActivation) {
     return NS_OK;  // JS may not handle returning of an error code
   }
 
-  auto cleanupIsNavigating = MakeScopeExit([&]() { mIsNavigating = false; });
+  PROFILER_MARKER_UNTYPED("GoBackUntyped", NAVIGATION,
+                          MarkerInnerWindowIdFromDocShell(this));
+
+  PROFILER_MARKER("GoBack", NAVIGATION,
+                  MarkerOptions(MarkerTiming::IntervalStart(),
+                                MarkerInnerWindowIdFromDocShell(this)),
+                  Tracing, "Navigation");
+
+  auto cleanupIsNavigating = MakeScopeExit([&]() {
+    mIsNavigating = false;
+    PROFILER_MARKER("GoBack", NAVIGATION,
+                    MarkerOptions(MarkerTiming::IntervalEnd(),
+                                  MarkerInnerWindowIdFromDocShell(this)),
+                    Tracing, "Navigation");
+  });
   mIsNavigating = true;
 
   RefPtr<ChildSHistory> rootSH = GetRootSessionHistory();
@@ -3138,11 +3152,25 @@ nsDocShell::GoBack(bool aRequireUserInteraction, bool aUserActivation) {
 
 NS_IMETHODIMP
 nsDocShell::GoForward(bool aRequireUserInteraction, bool aUserActivation) {
+  PROFILER_MARKER_UNTYPED("Navigation::GoForward", DOM,
+                          MarkerInnerWindowIdFromDocShell(this));
+
   if (!IsNavigationAllowed()) {
     return NS_OK;  // JS may not handle returning of an error code
   }
 
-  auto cleanupIsNavigating = MakeScopeExit([&]() { mIsNavigating = false; });
+  PROFILER_MARKER("GoForward", NAVIGATION,
+                  MarkerOptions(MarkerTiming::IntervalStart(),
+                                MarkerInnerWindowIdFromDocShell(this)),
+                  Tracing, "Navigation");
+
+  auto cleanupIsNavigating = MakeScopeExit([&]() {
+    mIsNavigating = false;
+    PROFILER_MARKER("GoForward", NAVIGATION,
+                    MarkerOptions(MarkerTiming::IntervalEnd(),
+                                  MarkerInnerWindowIdFromDocShell(this)),
+                    Tracing, "Navigation");
+  });
   mIsNavigating = true;
 
   RefPtr<ChildSHistory> rootSH = GetRootSessionHistory();
@@ -3160,7 +3188,18 @@ nsDocShell::GotoIndex(int32_t aIndex, bool aUserActivation) {
     return NS_OK;  // JS may not handle returning of an error code
   }
 
-  auto cleanupIsNavigating = MakeScopeExit([&]() { mIsNavigating = false; });
+  PROFILER_MARKER("GotoIndex", NAVIGATION,
+                  MarkerOptions(MarkerTiming::IntervalStart(),
+                                MarkerInnerWindowIdFromDocShell(this)),
+                  Tracing, "Navigation");
+
+  auto cleanupIsNavigating = MakeScopeExit([&]() {
+    mIsNavigating = false;
+    PROFILER_MARKER("GotoIndex", NAVIGATION,
+                    MarkerOptions(MarkerTiming::IntervalEnd(),
+                                  MarkerInnerWindowIdFromDocShell(this)),
+                    Tracing, "Navigation");
+  });
   mIsNavigating = true;
 
   RefPtr<ChildSHistory> rootSH = GetRootSessionHistory();

@@ -85,7 +85,7 @@ void nsDOMNavigationTiming::NotifyNavigationStart(
   mNavigationStart = TimeStamp::Now();
   mDocShellHasBeenActiveSinceNavigationStart =
       (aDocShellState == DocShellState::eActive);
-  PROFILER_MARKER_UNTYPED("Navigation::Start", DOM,
+  PROFILER_MARKER_UNTYPED("Navigation::Start", NAVIGATION,
                           MarkerInnerWindowIdFromDocShell(mDocShell));
 }
 
@@ -112,7 +112,7 @@ void nsDOMNavigationTiming::NotifyUnloadAccepted(nsIURI* aOldURI) {
 
 void nsDOMNavigationTiming::NotifyUnloadEventStart() {
   mUnloadStart = TimeStamp::Now();
-  PROFILER_MARKER("Unload", NETWORK,
+  PROFILER_MARKER("Unload", NAVIGATION,
                   MarkerOptions(MarkerTiming::IntervalStart(),
                                 MarkerInnerWindowIdFromDocShell(mDocShell)),
                   Tracing, "Navigation");
@@ -120,7 +120,7 @@ void nsDOMNavigationTiming::NotifyUnloadEventStart() {
 
 void nsDOMNavigationTiming::NotifyUnloadEventEnd() {
   mUnloadEnd = TimeStamp::Now();
-  PROFILER_MARKER("Unload", NETWORK,
+  PROFILER_MARKER("Unload", NAVIGATION,
                   MarkerOptions(MarkerTiming::IntervalEnd(),
                                 MarkerInnerWindowIdFromDocShell(mDocShell)),
                   Tracing, "Navigation");
@@ -132,7 +132,7 @@ void nsDOMNavigationTiming::NotifyLoadEventStart() {
   }
   mLoadEventStart = TimeStamp::Now();
 
-  PROFILER_MARKER("Load", NETWORK,
+  PROFILER_MARKER("Load", NAVIGATION,
                   MarkerOptions(MarkerTiming::IntervalStart(),
                                 MarkerInnerWindowIdFromDocShell(mDocShell)),
                   Tracing, "Navigation");
@@ -151,7 +151,7 @@ void nsDOMNavigationTiming::NotifyLoadEventEnd() {
   }
   mLoadEventEnd = TimeStamp::Now();
 
-  PROFILER_MARKER("Load", NETWORK,
+  PROFILER_MARKER("Load", NAVIGATION,
                   MarkerOptions(MarkerTiming::IntervalEnd(),
                                 MarkerInnerWindowIdFromDocShell(mDocShell)),
                   Tracing, "Navigation");
@@ -167,7 +167,7 @@ void nsDOMNavigationTiming::NotifyLoadEventEnd() {
           int(elapsed.ToMilliseconds()), int(duration.ToMilliseconds()));
       PAGELOAD_LOG(("%s", marker.get()));
       PROFILER_MARKER_TEXT(
-          "DocumentLoad", DOM,
+          "DocumentLoad", NAVIGATION,
           MarkerOptions(MarkerTiming::Interval(mNavigationStart, mLoadEventEnd),
                         MarkerInnerWindowIdFromDocShell(mDocShell)),
           marker);
@@ -193,7 +193,7 @@ void nsDOMNavigationTiming::NotifyDOMLoading(nsIURI* aURI) {
   mLoadedURI = aURI;
   mDOMLoading = TimeStamp::Now();
 
-  PROFILER_MARKER_UNTYPED("Navigation::DOMLoading", DOM,
+  PROFILER_MARKER_UNTYPED("Navigation::DOMLoading", NAVIGATION,
                           MarkerInnerWindowIdFromDocShell(mDocShell));
 }
 
@@ -204,7 +204,7 @@ void nsDOMNavigationTiming::NotifyDOMInteractive(nsIURI* aURI) {
   mLoadedURI = aURI;
   mDOMInteractive = TimeStamp::Now();
 
-  PROFILER_MARKER_UNTYPED("Navigation::DOMInteractive", DOM,
+  PROFILER_MARKER_UNTYPED("Navigation::DOMInteractive", NAVIGATION,
                           MarkerInnerWindowIdFromDocShell(mDocShell));
 }
 
@@ -215,7 +215,7 @@ void nsDOMNavigationTiming::NotifyDOMComplete(nsIURI* aURI) {
   mLoadedURI = aURI;
   mDOMComplete = TimeStamp::Now();
 
-  PROFILER_MARKER_UNTYPED("Navigation::DOMComplete", DOM,
+  PROFILER_MARKER_UNTYPED("Navigation::DOMComplete", NAVIGATION,
                           MarkerInnerWindowIdFromDocShell(mDocShell));
 }
 
@@ -227,7 +227,7 @@ void nsDOMNavigationTiming::NotifyDOMContentLoadedStart(nsIURI* aURI) {
   mLoadedURI = aURI;
   mDOMContentLoadedEventStart = TimeStamp::Now();
 
-  PROFILER_MARKER("DOMContentLoaded", NETWORK,
+  PROFILER_MARKER("DOMContentLoaded", NAVIGATION,
                   MarkerOptions(MarkerTiming::IntervalStart(),
                                 MarkerInnerWindowIdFromDocShell(mDocShell)),
                   Tracing, "Navigation");
@@ -248,7 +248,7 @@ void nsDOMNavigationTiming::NotifyDOMContentLoadedEnd(nsIURI* aURI) {
   mLoadedURI = aURI;
   mDOMContentLoadedEventEnd = TimeStamp::Now();
 
-  PROFILER_MARKER("DOMContentLoaded", NETWORK,
+  PROFILER_MARKER("DOMContentLoaded", NAVIGATION,
                   MarkerOptions(MarkerTiming::IntervalEnd(),
                                 MarkerInnerWindowIdFromDocShell(mDocShell)),
                   Tracing, "Navigation");
@@ -352,7 +352,7 @@ void nsDOMNavigationTiming::TTITimeout(nsITimer* aTimer) {
         nsContentUtils::TruncatedURLForDisplay(mLoadedURI).get());
 
     PROFILER_MARKER_TEXT(
-        "TimeToFirstInteractive (TTFI)", DOM,
+        "TimeToFirstInteractive (TTFI)", NAVIGATION,
         MarkerOptions(MarkerTiming::Interval(mNavigationStart, mTTFI),
                       MarkerInnerWindowIdFromDocShell(mDocShell)),
         marker);
@@ -382,7 +382,7 @@ void nsDOMNavigationTiming::NotifyNonBlankPaintForRootContentDocument() {
               "and first non-blank paint");
     PAGELOAD_LOG(("%s", marker.get()));
     PROFILER_MARKER_TEXT(
-        "FirstNonBlankPaint", DOM,
+        "FirstNonBlankPaint", NAVIGATION,
         MarkerOptions(MarkerTiming::Interval(mNavigationStart, mNonBlankPaint),
                       MarkerInnerWindowIdFromDocShell(mDocShell)),
         marker);
@@ -418,7 +418,7 @@ void nsDOMNavigationTiming::NotifyContentfulCompositeForRootContentDocument(
               "and first non-blank paint");
     PAGELOAD_LOG(("%s", marker.get()));
     PROFILER_MARKER_TEXT(
-        "FirstContentfulComposite", DOM,
+        "FirstContentfulComposite", NAVIGATION,
         MarkerOptions(
             MarkerTiming::Interval(mNavigationStart, mContentfulComposite),
             MarkerInnerWindowIdFromDocShell(mDocShell)),
@@ -477,7 +477,7 @@ void nsDOMNavigationTiming::MaybeAddLCPProfilerMarker(
   nsPrintfCString marker("Largest contentful paint after %dms",
                          int(elapsed.ToMilliseconds()));
   PROFILER_MARKER_TEXT(
-      "LargestContentfulPaint", DOM,
+      "LargestContentfulPaint", NAVIGATION,
       // Putting this marker to the main thread even if it's called from another
       // one.
       MarkerOptions(MarkerThreadId::MainThread(),

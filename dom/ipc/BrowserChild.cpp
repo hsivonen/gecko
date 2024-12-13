@@ -2491,6 +2491,11 @@ mozilla::ipc::IPCResult BrowserChild::RecvSwappedWithOtherRemoteLoader(
 
   nsCOMPtr<EventTarget> ourEventTarget = nsGlobalWindowOuter::Cast(ourWindow);
 
+  PROFILER_MARKER("FrameLoaderSwapFromRemote", NAVIGATION,
+                  MarkerOptions(MarkerTiming::IntervalStart(),
+                                MarkerInnerWindowIdFromDocShell(ourDocShell)),
+                  Tracing, "Navigation");
+
   docShell->SetInFrameSwap(true);
 
   nsContentUtils::FirePageShowEventForFrameLoaderSwap(
@@ -2520,6 +2525,11 @@ mozilla::ipc::IPCResult BrowserChild::RecvSwappedWithOtherRemoteLoader(
       ourDocShell, ourEventTarget, true, true);
 
   docShell->SetInFrameSwap(false);
+
+  PROFILER_MARKER("FrameLoaderSwapFromRemote", NAVIGATION,
+                  MarkerOptions(MarkerTiming::IntervalEnd(),
+                                MarkerInnerWindowIdFromDocShell(ourDocShell)),
+                  Tracing, "Navigation");
 
   // This is needed to get visibility state right in cases when we swapped a
   // visible tab (foreground in visible window) with a non-visible tab.

@@ -951,6 +951,22 @@ nsDocumentViewer::LoadComplete(nsresult aStatus) {
 
   // First, get the window from the document...
   nsCOMPtr<nsPIDOMWindowOuter> window = mDocument->GetWindow();
+  RefPtr<nsDocShell> docShell;
+  if (window) {
+    docShell = nsDocShell::Cast(window->GetDocShell());
+  }
+
+  PROFILER_MARKER("LoadComplete", NAVIGATION,
+                  MarkerOptions(MarkerTiming::IntervalStart(),
+                                MarkerInnerWindowIdFromDocShell(docShell)),
+                  Tracing, "Navigation");
+
+  auto intervalEnd = MakeScopeExit([&]() {
+    PROFILER_MARKER("LoadComplete", NAVIGATION,
+                    MarkerOptions(MarkerTiming::IntervalEnd(),
+                                  MarkerInnerWindowIdFromDocShell(docShell)),
+                    Tracing, "Navigation");
+  });
 
   mLoaded = true;
 
@@ -976,7 +992,6 @@ nsDocumentViewer::LoadComplete(nsresult aStatus) {
     // onload to the document content since that would likely confuse scripts
     // on the page.
 
-    RefPtr<nsDocShell> docShell = nsDocShell::Cast(window->GetDocShell());
     NS_ENSURE_TRUE(docShell, NS_ERROR_UNEXPECTED);
 
     // Unfortunately, docShell->GetRestoringDocument() might no longer be set
